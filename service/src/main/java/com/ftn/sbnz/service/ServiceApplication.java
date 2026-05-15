@@ -14,7 +14,7 @@ public class ServiceApplication {
 	@Bean
 	public KieContainer kieContainer() {
 		KieServices ks = KieServices.Factory.get();
-		KieContainer kContainer = ks..newKieContainer(ks.newReleaseId("com.ftn.sbnz", "skjar", "0.0.1-SNAPSHOT"));
+		KieContainer kContainer = ks.newKieContainer(ks.newReleaseId("com.ftn.sbnz", "skjar", "0.0.1-SNAPSHOT"));
 		KieScanner kScanner = ks.newKieScanner(kContainer);
 		kScanner.start(10000);
 
