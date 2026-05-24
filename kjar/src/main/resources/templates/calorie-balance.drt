@@ -1,0 +1,27 @@
+template header
+ruleName
+operator
+percentage
+userGoal
+resultingStatus
+severity
+
+package rules.templates;
+
+import com.ftn.sbnz.model.enums.DailyIntakeStatus;
+import com.ftn.sbnz.model.models.DailyIntake;
+import com.ftn.sbnz.model.models.User;
+
+template "calorie balance"
+
+rule "@{ruleName}"
+when
+    $user : User($userId : id, $target : targetCalories > 0)
+    $intake : DailyIntake(userId == $userId, totalCalories @{operator} ($target * @{percentage}))
+then
+    modify($intake) {
+        setStatus(DailyIntakeStatus.@{resultingStatus})
+    }
+end
+
+end template

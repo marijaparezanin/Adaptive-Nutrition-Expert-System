@@ -1,0 +1,4 @@
+ruleName,operator,percentage,userGoal,resultingStatus,severity
+Rule_Calorie_Surplus,>,1.10,Any,SURPLUS,WARNING
+Rule_Calorie_Deficit,<,0.70,Any,DEFICIT,WARNING
+Rule_Maintenance_Stability,>=,0.95,Any,MAINTENANCE_STABLE,LOW

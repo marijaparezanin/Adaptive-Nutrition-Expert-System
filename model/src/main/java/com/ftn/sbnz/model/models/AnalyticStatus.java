@@ -8,7 +8,7 @@ import org.kie.api.definition.type.Role;
 import java.time.LocalDateTime;
 
 @Role(Role.Type.EVENT)
-@Expires("2h")
+@Expires("7d")
 public class AnalyticStatus {
 
     private AnalyticStatusType type;

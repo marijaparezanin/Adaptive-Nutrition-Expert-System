@@ -1,0 +1,4 @@
+ruleName,eventType,category,window,frequency,startHour,endHour,patternName
+Template_LateNightEatingPattern,MealLogged,Any,7d,3,22,6,LateNightEatingPattern
+Template_BreakfastSkippingPattern,MealSkipped,BREAKFAST,3d,3,6,10,BreakfastSkippingPattern
+Template_BingePattern,MealLogged,Any,90m,3,,Any,BingePattern

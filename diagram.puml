@@ -1,0 +1,260 @@
+@startuml nutrition_model
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam groupInheritance 2
+
+' ─────────────────────────────────────────
+'  Enumerations
+' ─────────────────────────────────────────
+
+enum Gender {
+    MALE
+    FEMALE
+}
+
+enum GoalType {
+    WEIGHT_LOSS
+    MAINTENANCE
+    MUSCLE_GAIN
+}
+
+enum MealCategory {
+    BREAKFAST
+    LUNCH
+    DINNER
+    SNACK
+}
+
+enum DailyIntakeStatus {
+    SURPLUS
+    DEFICIT
+    MAINTENANCE_STABLE
+    CONFLICT_HIGH
+    CONFLICT_CRITICAL
+}
+
+enum WeightTrend {
+    NEGATIVE
+    POSITIVE
+    STABLE
+}
+
+enum SeverityLevel {
+    LOW
+    WARNING
+    HIGH
+    CRITICAL
+}
+
+enum AnalyticStatusType {
+    PROTEIN_WARNING
+    PROTEIN_DISTRIBUTION_CONFLICT
+    PROTEIN_CRITICAL
+    ENERGY_SHORTAGE
+    OVEREATING_DETECTED
+    MUSCLE_LOSS_RISK
+    WEIGHT_STAGNATION_CONFIRMED
+    CALORIC_ADAPTATION_BLOCK
+    PLAN_CHANGE_NEEDED
+    EXTREME_CALORIC_RESTRICTION
+    CALORIC_SURPLUS_ACCUMULATION
+    LOW_PROTEIN_MEAL
+    PROTEIN_INSUFFICIENT
+    CIRCADIAN_RHYTHM_DISRUPTION
+    WEIGHT_STAGNATION_DETECTED
+    CALORIE_SPIKE_DETECTED
+    LONG_FAST_DETECTED
+    HIGH_PROTEIN_HYDRATION_NEEDED
+}
+
+' ─────────────────────────────────────────
+'  Core meal fact and primitive events (Drools CEP)
+' ─────────────────────────────────────────
+
+class Meal <<Event>> {
+    - name : String
+    - category : MealCategory
+    - calories : double
+    - protein : double
+    - carbohydrates : double
+    - fat : double
+    - fiber : double
+    - sugars : double
+    - timestamp : LocalDateTime
+    - userId : Long
+    - processed : boolean
+    + getTimestampMillis() : long
+}
+
+class MealLogged <<Event>> {
+    + inherits Meal
+}
+
+class MealSkipped <<Event>> {
+    - userId : Long
+    - category : MealCategory
+    - date : LocalDate
+}
+
+class NewActivityRoutine <<Event>> {
+    - userId : Long
+    - activityFactor : double
+    - timestamp : LocalDateTime
+}
+
+class AnalyticStatus <<Event>> {
+    - type : AnalyticStatusType
+    - severity : SeverityLevel
+    - expiresAt : LocalDateTime
+    - userId : Long
+}
+
+class WeightMeasured <<Event>> {
+    - userId : Long
+    - weight : double
+    - timestamp : LocalDateTime
+}
+
+' ─────────────────────────────────────────
+'  Core Domain Models
+' ─────────────────────────────────────────
+
+class User {
+    - id : Long
+    - gender : Gender
+    - age : int
+    - weight : double
+    - height : double
+    - goal : GoalType
+    - activityFactor : double
+    - allergies : List<String>
+    - targetCalories : double
+    - targetProtein : double
+    - targetFiber : double
+    - bmr : double
+    + initializeTargets() : void
+    + calculateBMR() : double
+    + calculateTDEE() : double
+}
+
+class DailyIntake {
+    - date : LocalDate
+    - totalCalories : double
+    - averageCalories : double
+    - totalProtein : double
+    - totalFiber : double
+    - mealCount : int
+    - status : DailyIntakeStatus
+    - userId : Long
+    + addMeal(meal : Meal) : void
+}
+
+class WeeklyPattern {
+    - weekId : String
+    - skippedMealCount : int
+    - lateMealCount : int
+    - totalCalories : double
+    - averageCalories : double
+    - weightTrend : WeightTrend
+    - proteinTrend : double
+    - userId : Long
+    - weightVarianceKg : double
+}
+
+class Recommendation {
+    - type : String
+    - message : String
+    - userId : Long
+    - createdAt : LocalDateTime
+}
+
+class RuleTemplateParameter {
+    - ruleName : String
+    - operator : String
+    - percentage : double
+    - userGoal : String
+    - resultingStatus : String
+    - severity : String
+}
+
+' ─────────────────────────────────────────
+'  NutritionPattern hierarchy
+' ─────────────────────────────────────────
+
+abstract class NutritionPattern {
+    - userId : Long
+    - detectedAt : LocalDate
+    - description : String
+}
+
+class BingePattern {
+    - mealsInWindow : int
+    - windowMinutes : int
+}
+
+class BreakfastSkippingPattern {
+    - skippedDays : int
+}
+
+class ConsistentProteinDeficit {
+    - daysBelowTarget : int
+}
+
+class LateNightEatingPattern {
+    - lateMealCount : int
+}
+
+class LongFastDetected {
+    - hoursWithoutMeal : double
+}
+
+class UnplannedSnackingPattern {
+    - snackCount : int
+}
+
+class WeightStagnationDetected {
+    - varianceKg : double
+}
+
+' ─────────────────────────────────────────
+'  Inheritance
+' ─────────────────────────────────────────
+
+NutritionPattern <|-- BingePattern
+NutritionPattern <|-- BreakfastSkippingPattern
+NutritionPattern <|-- ConsistentProteinDeficit
+NutritionPattern <|-- LateNightEatingPattern
+NutritionPattern <|-- LongFastDetected
+NutritionPattern <|-- UnplannedSnackingPattern
+NutritionPattern <|-- WeightStagnationDetected
+Meal <|-- MealLogged
+
+' ─────────────────────────────────────────
+'  Associations
+' ─────────────────────────────────────────
+
+User "1" --> "0..*" Meal           : logs >
+User "1" --> "0..*" MealLogged     : emits >
+User "1" --> "0..*" DailyIntake    : has >
+User "1" --> "0..*" WeeklyPattern  : summarised by >
+User "1" --> "0..*" Recommendation : receives >
+User "1" --> "0..*" MealSkipped    : may skip >
+User "1" --> "0..*" WeightMeasured : measures >
+User "1" --> "0..*" NewActivityRoutine : changes activity >
+
+DailyIntake --> DailyIntakeStatus
+DailyIntake ..> Meal : <<uses>>
+
+WeeklyPattern --> WeightTrend
+
+Meal --> MealCategory
+MealSkipped --> MealCategory
+
+AnalyticStatus --> AnalyticStatusType
+AnalyticStatus --> SeverityLevel
+
+User --> Gender
+User --> GoalType
+
+@enduml
