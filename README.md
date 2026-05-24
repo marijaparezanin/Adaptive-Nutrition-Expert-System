@@ -110,7 +110,7 @@ java -jar target\service-0.0.1-SNAPSHOT.jar
 
 Call endpoints from a second PowerShell window while the service is running.
 
-The demos exist because this is a knowledge-based system, not a normal CRUD application. In a normal application you call one method and get one calculated answer. In Drools, you insert facts into working memory, run `fireAllRules()`, and the rule engine decides which rules match. The demos create controlled fact sets so you can prove that forward chaining, CEP, templates, and backward-style explanation queries work.
+The demos exist because this is a knowledge-based system, not a normal CRUD application. In a normal application you call one method and get one calculated answer. In Drools, you insert facts into working memory, run `fireAllRules()`, and the rule engine decides which rules match. The demos create controlled fact sets to prove that forward chaining, CEP, templates, and backward-style explanation queries work.
 
 This command:
 
@@ -124,7 +124,6 @@ does three things:
 2. The controller creates a sample user, a daily intake object, and one meal, then inserts them into `nutritionKSession`.
 3. Drools fires all matching rules and the controller converts the resulting facts into JSON.
 
-You are not manually calling a Drools rule. You are calling the Spring endpoint, and that endpoint runs the Drools session for you.
 
 The fields in the output mean:
 
