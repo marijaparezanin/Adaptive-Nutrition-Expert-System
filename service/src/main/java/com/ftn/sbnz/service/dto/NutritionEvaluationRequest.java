@@ -2,6 +2,7 @@ package com.ftn.sbnz.service.dto;
 
 import com.ftn.sbnz.model.models.DailyIntake;
 import com.ftn.sbnz.model.models.Meal;
+import com.ftn.sbnz.model.models.MissedMealAlert;
 import com.ftn.sbnz.model.events.MealSkipped;
 import com.ftn.sbnz.model.events.NewActivityRoutine;
 import com.ftn.sbnz.model.events.WeightMeasured;
@@ -21,6 +22,7 @@ public class NutritionEvaluationRequest {
     private List<MealSkipped> skippedMeals = new ArrayList<>();
     private List<WeightMeasured> weightMeasurements = new ArrayList<>();
     private List<NewActivityRoutine> activityChanges = new ArrayList<>();
+    private List<MissedMealAlert> missedMealAlerts = new ArrayList<>();
 
     public User getUser() {
         return user;
@@ -84,5 +86,13 @@ public class NutritionEvaluationRequest {
 
     public void setActivityChanges(List<NewActivityRoutine> activityChanges) {
         this.activityChanges = activityChanges;
+    }
+
+    public List<MissedMealAlert> getMissedMealAlerts() {
+        return missedMealAlerts;
+    }
+
+    public void setMissedMealAlerts(List<MissedMealAlert> missedMealAlerts) {
+        this.missedMealAlerts = missedMealAlerts;
     }
 }

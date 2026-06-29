@@ -518,3 +518,20 @@ The class diagram is available at:
 - `class-diagram.png`
 
 It shows the relationship between users, meals, daily/weekly aggregates, analytic statuses, recommendations, primitive events, CEP pattern facts, and template parameters.
+
+Complete running:
+`
+& "d:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\model\mvnw.cmd" install -f "d:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\model\pom.xml"
+`
+
+`
+& "d:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\kjar\mvnw.cmd" install -f "d:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\kjar\pom.xml"
+`
+
+`
+& "d:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\service\mvnw.cmd" install -f "d:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\service\pom.xml"
+`
+
+`
+ java -jar "D:\desktop\faks\vjezbe sbnz\Adaptive-Nutrition-Expert-System\service\target\service-0.0.1-SNAPSHOT.jar"
+`

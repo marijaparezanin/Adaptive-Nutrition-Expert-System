@@ -7,16 +7,20 @@ frequency
 startHour
 endHour
 patternName
+filterExpression
+windowExpression
+constructorArgs
 
-package rules.templates;
+package rules;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import com.ftn.sbnz.model.enums.MealCategory;
+import com.ftn.sbnz.model.events.MealSkipped;
+import com.ftn.sbnz.model.models.BingePattern;
+import com.ftn.sbnz.model.models.BreakfastSkippingPattern;
 import com.ftn.sbnz.model.models.LateNightEatingPattern;
 import com.ftn.sbnz.model.models.Meal;
-import com.ftn.sbnz.model.models.MealSkipped;
 import com.ftn.sbnz.model.models.User;
 
 template "temporal pattern"
@@ -25,11 +29,12 @@ rule "@{ruleName}"
 when
     $user : User($userId : id)
     Number(intValue >= @{frequency}) from accumulate(
-        @{eventType}(userId == $userId),
+        @{eventType}(userId == $userId @{filterExpression}) @{windowExpression},
         count(1)
     )
+    not @{patternName}(userId == $userId)
 then
-    // The generated form instantiates the configured CEP pattern object.
+    insert(new @{patternName}($userId, LocalDate.now(), @{constructorArgs}));
 end
 
 end template

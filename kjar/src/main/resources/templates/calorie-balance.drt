@@ -5,8 +5,9 @@ percentage
 userGoal
 resultingStatus
 severity
+extraCondition
 
-package rules.templates;
+package rules;
 
 import com.ftn.sbnz.model.enums.DailyIntakeStatus;
 import com.ftn.sbnz.model.models.DailyIntake;
@@ -17,7 +18,13 @@ template "calorie balance"
 rule "@{ruleName}"
 when
     $user : User($userId : id, $target : targetCalories > 0)
-    $intake : DailyIntake(userId == $userId, totalCalories @{operator} ($target * @{percentage}))
+    $intake : DailyIntake(
+        userId == $userId,
+        totalCalories > 0,
+        status != DailyIntakeStatus.@{resultingStatus}
+    )
+    eval("@{userGoal}".equals("Any") || $user.getGoal().name().equals("@{userGoal}"))
+    eval($intake.getTotalCalories() @{operator} ($target * @{percentage}) @{extraCondition})
 then
     modify($intake) {
         setStatus(DailyIntakeStatus.@{resultingStatus})

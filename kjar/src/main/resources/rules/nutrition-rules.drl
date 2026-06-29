@@ -1,6 +1,7 @@
 package rules;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import com.ftn.sbnz.model.enums.AnalyticStatusType;
 import com.ftn.sbnz.model.enums.DailyIntakeStatus;
@@ -19,12 +20,17 @@ import com.ftn.sbnz.model.models.DailyIntake;
 import com.ftn.sbnz.model.models.LateNightEatingPattern;
 import com.ftn.sbnz.model.models.LongFastDetected;
 import com.ftn.sbnz.model.models.Meal;
+import com.ftn.sbnz.model.models.MissedMealAlert;
 import com.ftn.sbnz.model.models.Recommendation;
 import com.ftn.sbnz.model.models.RuleTemplateParameter;
 import com.ftn.sbnz.model.models.UnplannedSnackingPattern;
 import com.ftn.sbnz.model.models.User;
 import com.ftn.sbnz.model.models.WeeklyPattern;
 import com.ftn.sbnz.model.models.WeightStagnationDetected;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIER 0 — INITIALIZATION (salience 100-95)
+// ─────────────────────────────────────────────────────────────────────────────
 
 rule "Initialize user target values"
 salience 100
@@ -49,6 +55,10 @@ then
     }
 end
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TIER 1 — MEAL PROCESSING (salience 90)
+// ─────────────────────────────────────────────────────────────────────────────
+
 rule "Update daily intake from meal"
 salience 90
 when
@@ -63,94 +73,9 @@ then
     }
 end
 
-rule "Rule Calorie Surplus"
-when
-    $user : User($userId : id, $target : targetCalories > 0)
-    $intake : DailyIntake(userId == $userId, totalCalories > ($target * 1.10), status != DailyIntakeStatus.SURPLUS)
-then
-    modify($intake) {
-        setStatus(DailyIntakeStatus.SURPLUS)
-    }
-end
-
-rule "Rule Calorie Deficit"
-when
-    $user : User($userId : id, $target : targetCalories > 0)
-    $intake : DailyIntake(userId == $userId, totalCalories < ($target * 0.70), totalCalories > 0, status != DailyIntakeStatus.DEFICIT)
-then
-    modify($intake) {
-        setStatus(DailyIntakeStatus.DEFICIT)
-    }
-end
-
-rule "Rule Maintenance Stability"
-when
-    $user : User($userId : id, $target : targetCalories > 0)
-    $intake : DailyIntake(
-        userId == $userId,
-        totalCalories >= ($target * 0.95),
-        totalCalories <= ($target * 1.05),
-        status != DailyIntakeStatus.MAINTENANCE_STABLE
-    )
-then
-    modify($intake) {
-        setStatus(DailyIntakeStatus.MAINTENANCE_STABLE)
-    }
-end
-
-rule "Rule Weight Loss Conflict"
-when
-    $user : User($userId : id, goal == GoalType.WEIGHT_LOSS)
-    DailyIntake(userId == $userId, status == DailyIntakeStatus.SURPLUS)
-    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIC_SURPLUS_ACCUMULATION)
-then
-    insert(new AnalyticStatus(
-        AnalyticStatusType.CALORIC_SURPLUS_ACCUMULATION,
-        SeverityLevel.HIGH,
-        LocalDateTime.now().plusDays(1),
-        $userId
-    ));
-    insert(new Recommendation(
-        "WEIGHT_LOSS_CONFLICT",
-        "Dnevni unos je vise od 10% iznad cilja za mrsavljenje. Smanji kalorijsko opterecenje preostalih obroka ili povecaj aktivnost.",
-        $userId,
-        LocalDateTime.now()
-    ));
-end
-
-rule "Rule Mass Gain Conflict"
-when
-    $user : User($userId : id, goal == GoalType.MUSCLE_GAIN)
-    DailyIntake(userId == $userId, status == DailyIntakeStatus.DEFICIT)
-    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.EXTREME_CALORIC_RESTRICTION)
-then
-    insert(new AnalyticStatus(
-        AnalyticStatusType.EXTREME_CALORIC_RESTRICTION,
-        SeverityLevel.CRITICAL,
-        LocalDateTime.now().plusDays(1),
-        $userId
-    ));
-    insert(new Recommendation(
-        "MASS_GAIN_CONFLICT",
-        "Unos je prenizak za cilj povecanja misicne mase. Dodaj energetski i proteinski kvalitetan obrok.",
-        $userId,
-        LocalDateTime.now()
-    ));
-end
-
-rule "Rule Weight Loss Activity Recommendation"
-when
-    $user : User($userId : id, goal == GoalType.WEIGHT_LOSS, $target : targetCalories > 0)
-    WeeklyPattern(userId == $userId, averageCalories >= $target)
-    not Recommendation(userId == $userId, type == "ACTIVITY_INCREASE")
-then
-    insert(new Recommendation(
-        "ACTIVITY_INCREASE",
-        "Cilj je mrsavljenje, ali sedmicni prosjek ne pokazuje kalorijski deficit. Povecaj aktivnost ili smanji unos za naredni period.",
-        $userId,
-        LocalDateTime.now()
-    ));
-end
+// ─────────────────────────────────────────────────────────────────────────────
+// TIER 2 — SINGLE-MEAL SIGNALS
+// ─────────────────────────────────────────────────────────────────────────────
 
 rule "Rule Low Protein Meal"
 when
@@ -178,11 +103,56 @@ then
     ));
     insert(new Recommendation(
         "LOW_PROTEIN_MEAL",
-        "Obrok ima manje od 20g proteina. Dodaj jaja, meso, ribu, mlijecne proizvode ili drugi proteinski izvor.",
+        "A meal contains less than 20g protein. Add eggs, meat, fish, dairy or another protein source.",
         $userId,
         LocalDateTime.now()
     ));
 end
+
+rule "CEP Calorie Spike Detected"
+when
+    $user : User($userId : id, $target : targetCalories > 0)
+    Meal(userId == $userId, calories > ($target * 0.50))
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIE_SPIKE_DETECTED)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.CALORIE_SPIKE_DETECTED,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "CALORIE_SPIKE",
+        "One meal exceeds 50% of your daily calorie target. Plan remaining meals lighter with more protein and fiber.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+rule "CEP Late Night Spike"
+when
+    $user : User($userId : id, $target : targetCalories > 0)
+    Meal(userId == $userId, calories > ($target * 0.30), (timestamp.getHour() >= 22 || timestamp.getHour() < 6))
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.CIRCADIAN_RHYTHM_DISRUPTION)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.CIRCADIAN_RHYTHM_DISRUPTION,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new LateNightEatingPattern($userId, LocalDate.now(), 1));
+    insert(new Recommendation(
+        "LATE_NIGHT_SPIKE",
+        "A large meal was logged after 22:00. Eating heavily late disrupts circadian metabolic rhythm. Try finishing calories before 20:00.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIER 3 — DAILY INTAKE SIGNALS
+// ─────────────────────────────────────────────────────────────────────────────
 
 rule "Rule Protein Floor"
 when
@@ -212,7 +182,251 @@ then
     ));
     insert(new Recommendation(
         "HIGH_PROTEIN_HYDRATION",
-        "Unos proteina je iznad 2.2g/kg. Povecaj unos vode i rasporedi proteine kroz vise obroka.",
+        "Protein intake exceeds 2.2g/kg. Increase water intake and spread protein across more meals.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+rule "Rule Fiber Critically Low"
+when
+    $user : User($userId : id)
+    DailyIntake(userId == $userId, totalFiber > 0, totalFiber < 10)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.FIBER_CRITICALLY_LOW)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.FIBER_CRITICALLY_LOW,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "FIBER_LOW",
+        "Daily fiber is critically low (under 10g). Add vegetables, legumes or whole grains to each meal.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+rule "Rule Weight Loss Conflict"
+when
+    $user : User($userId : id, goal == GoalType.WEIGHT_LOSS)
+    DailyIntake(userId == $userId, status == DailyIntakeStatus.SURPLUS)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIC_SURPLUS_ACCUMULATION)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.CALORIC_SURPLUS_ACCUMULATION,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "WEIGHT_LOSS_CONFLICT",
+        "Daily intake is above your weight-loss target. Reduce caloric load of remaining meals or increase activity.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Chain: Surplus + Spike → compound warning for weight-loss goal
+rule "Rule Surplus With Spike Combo"
+when
+    $user : User($userId : id, goal == GoalType.WEIGHT_LOSS)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIC_SURPLUS_ACCUMULATION)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIE_SPIKE_DETECTED)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.SURPLUS_WITH_DEFICIT_GOAL)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.SURPLUS_WITH_DEFICIT_GOAL,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "SURPLUS_SPIKE_COMBO",
+        "You are in caloric surplus AND had a calorie spike meal — a compounding risk for weight loss. Reassess your meal plan for the rest of the day.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+rule "Rule Mass Gain Conflict"
+when
+    $user : User($userId : id, goal == GoalType.MUSCLE_GAIN)
+    DailyIntake(userId == $userId, status == DailyIntakeStatus.DEFICIT)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.EXTREME_CALORIC_RESTRICTION)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.EXTREME_CALORIC_RESTRICTION,
+        SeverityLevel.CRITICAL,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "MASS_GAIN_CONFLICT",
+        "Intake is too low for muscle gain. Add a protein-rich, energy-dense meal.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIER 4 — CEP PATTERN DETECTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Fixed BingePattern: counts meals within 90 min of a single anchor meal
+// 3 meals at 8am, 12:30pm, 6pm will NOT trigger this — they are hours apart
+rule "CEP Rapid Meal Cluster"
+when
+    $user : User($userId : id)
+    $anchor : Meal(userId == $userId, $anchorTime : timestamp)
+    Number(intValue >= 3) from accumulate(
+        Meal(userId == $userId,
+             timestamp.isAfter($anchorTime.minusMinutes(90)),
+             timestamp.isBefore($anchorTime.plusMinutes(90))),
+        count(1)
+    )
+    not BingePattern(userId == $userId)
+then
+    insert(new BingePattern($userId, LocalDate.now(), 3, 90));
+end
+
+rule "CEP Unplanned Snacking"
+when
+    $user : User($userId : id)
+    Number(intValue > 3) from accumulate(
+        Meal(userId == $userId, category == MealCategory.SNACK),
+        count(1)
+    )
+    not UnplannedSnackingPattern(userId == $userId)
+then
+    insert(new UnplannedSnackingPattern($userId, LocalDate.now(), 4));
+end
+
+// Chain: UnplannedSnacking + high calories → caloric risk signal
+rule "Rule Snack Overload Caloric Risk"
+when
+    $user : User($userId : id, $target : targetCalories > 0)
+    UnplannedSnackingPattern(userId == $userId)
+    DailyIntake(userId == $userId, totalCalories > ($target * 0.80))
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.SNACK_OVERLOAD_CALORIC_RISK)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.SNACK_OVERLOAD_CALORIC_RISK,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "SNACK_OVERLOAD",
+        "Unplanned snacking has consumed over 80% of your daily calorie budget. Stop unplanned eating and stick to your next planned meal.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Long fast: gap > 6h between any two consecutive meals during active hours
+rule "Rule Long Fast"
+when
+    $first : Meal($userId : userId, $firstTime : timestamp)
+    $second : Meal(userId == $userId,
+                   this != $first,
+                   timestamp.isAfter($firstTime.plusHours(6)),
+                   timestamp.getHour() >= 8,
+                   timestamp.getHour() <= 22)
+    not LongFastDetected(userId == $userId)
+then
+    insert(new LongFastDetected($userId, LocalDate.now(), 6));
+    insert(new AnalyticStatus(
+        AnalyticStatusType.LONG_FAST_DETECTED,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "LONG_FAST",
+        "A gap of over 6 hours between meals was detected during active hours. Plan a small snack or bring your next meal forward.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// CEP Missed Meal — frontend inserts MissedMealAlert facts when "End Day" is pressed
+rule "CEP Missed Breakfast Detected"
+when
+    $user : User($userId : id)
+    MissedMealAlert(userId == $userId, missedCategory == "BREAKFAST")
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.MISSED_MEAL_DETECTED)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.MISSED_MEAL_DETECTED,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "MISSED_BREAKFAST",
+        "No breakfast was logged today. Skipping breakfast raises cortisol and tends to drive compensatory overeating later in the day.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+rule "CEP Missed Lunch Detected"
+when
+    $user : User($userId : id)
+    MissedMealAlert(userId == $userId, missedCategory == "LUNCH")
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.MISSED_MEAL_DETECTED)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.MISSED_MEAL_DETECTED,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "MISSED_LUNCH",
+        "No lunch was logged today. Skipping midday meals often leads to energy crashes and evening overeating.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Chain: LongFast + MissedMeal → elevated Energy Shortage
+rule "Rule Long Fast Plus Missed Meal Chains to Energy Shortage"
+when
+    $user : User($userId : id)
+    LongFastDetected(userId == $userId)
+    MissedMealAlert(userId == $userId)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.ENERGY_SHORTAGE)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.ENERGY_SHORTAGE,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "FAST_PLUS_MISSED_MEAL",
+        "Both a long fasting gap AND a skipped meal were detected. Your body is in an energy shortage. Eat a balanced meal with protein and complex carbs now.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIER 5 — MULTI-DAY / PATTERN SIGNALS
+// ─────────────────────────────────────────────────────────────────────────────
+
+rule "Rule Weight Loss Activity Recommendation"
+when
+    $user : User($userId : id, goal == GoalType.WEIGHT_LOSS, $target : targetCalories > 0)
+    WeeklyPattern(userId == $userId, averageCalories >= $target)
+    not Recommendation(userId == $userId, type == "ACTIVITY_INCREASE")
+then
+    insert(new Recommendation(
+        "ACTIVITY_INCREASE",
+        "Goal is weight loss but weekly average shows no caloric deficit. Increase activity or reduce intake for the coming period.",
         $userId,
         LocalDateTime.now()
     ));
@@ -221,12 +435,13 @@ end
 rule "Rule Weight Oscillation"
 when
     $first : WeightMeasured($userId : userId, $firstWeight : weight, $firstTime : timestamp)
-    WeightMeasured(userId == $userId, Math.abs(weight - $firstWeight) > 2.0, timestamp.isAfter($firstTime), timestamp.isBefore($firstTime.plusDays(8)))
+    WeightMeasured(userId == $userId, Math.abs(weight - $firstWeight) > 2.0,
+                   timestamp.isAfter($firstTime), timestamp.isBefore($firstTime.plusDays(8)))
     not Recommendation(userId == $userId, type == "WEIGHT_OSCILLATION")
 then
     insert(new Recommendation(
         "WEIGHT_OSCILLATION",
-        "Tezina je oscilovala vise od 2kg u jednoj sedmici. Provjeri hidrataciju, unos soli i konzistentnost mjerenja.",
+        "Weight oscillated more than 2kg in one week. Check hydration, sodium intake and consistency of measurement timing.",
         $userId,
         LocalDateTime.now()
     ));
@@ -247,41 +462,15 @@ then
         LocalDateTime.now().plusDays(3),
         $userId
     ));
-end
-
-rule "CEP Calorie Spike Detected"
-when
-    $user : User($userId : id, $target : targetCalories > 0)
-    Meal(userId == $userId, calories > ($target * 0.50))
-    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIE_SPIKE_DETECTED)
-then
-    insert(new AnalyticStatus(
-        AnalyticStatusType.CALORIE_SPIKE_DETECTED,
-        SeverityLevel.WARNING,
-        LocalDateTime.now().plusDays(1),
-        $userId
-    ));
     insert(new Recommendation(
-        "CALORIE_SPIKE",
-        "Jedan obrok prelazi 50% dnevnog cilja. Preostale obroke planiraj sa manje kalorija i vise proteina/vlakana.",
+        "PROTEIN_DISTRIBUTION",
+        "4 or more meals have been low in protein. Spread intake evenly — every meal should hit at least 20g.",
         $userId,
         LocalDateTime.now()
     ));
 end
 
-rule "CEP Breakfast Skipping"
-when
-    $user : User($userId : id)
-    Number(intValue >= 3) from accumulate(
-        MealSkipped(userId == $userId, category == MealCategory.BREAKFAST),
-        count(1)
-    )
-    not BreakfastSkippingPattern(userId == $userId)
-then
-    insert(new BreakfastSkippingPattern($userId, java.time.LocalDate.now(), 3));
-end
-
-rule "Rule Energy Shortage Link"
+rule "Rule Energy Shortage Link from Breakfast Skipping Pattern"
 when
     $pattern : BreakfastSkippingPattern($userId : userId)
     not AnalyticStatus(userId == $userId, type == AnalyticStatusType.ENERGY_SHORTAGE)
@@ -294,12 +483,13 @@ then
     ));
     insert(new Recommendation(
         "BREAKFAST_SKIPPING",
-        "Preskakanje dorucka je detektovano najmanje 3 puta. Uvedi jutarnji obrok oko 250 kcal do 09:00h.",
+        "Breakfast skipping detected at least 3 times. Introduce a morning meal of ~250 kcal before 09:00.",
         $userId,
         LocalDateTime.now()
     ));
 end
 
+// Chain: Energy Shortage + large meal → Overeating
 rule "Rule Pattern Linkage Overtaking"
 when
     $user : User($userId : id, $target : targetCalories > 0)
@@ -315,94 +505,66 @@ then
     ));
     insert(new Recommendation(
         "BINGE_WARNING",
-        "Preskakanje obroka je povezano sa velikim kasnijim unosom kalorija. Rasporedi energiju ravnomjernije kroz dan.",
+        "Meal skipping has been linked to a large compensatory meal. Distribute energy more evenly through the day.",
         $userId,
         LocalDateTime.now()
     ));
 end
 
-rule "CEP Late Night Spike"
+// Chain: Overeating + Fiber Low → quality deficit escalation
+rule "Rule Overeating Plus Fiber Low Escalation"
 when
-    $user : User($userId : id, $target : targetCalories > 0)
-    Meal(userId == $userId, calories > ($target * 0.30), (timestamp.getHour() >= 22 || timestamp.getHour() < 6))
-    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.CIRCADIAN_RHYTHM_DISRUPTION)
+    AnalyticStatus($userId : userId, type == AnalyticStatusType.OVEREATING_DETECTED)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.FIBER_CRITICALLY_LOW)
+    not Recommendation(userId == $userId, type == "QUALITY_DEFICIT")
 then
-    insert(new AnalyticStatus(
-        AnalyticStatusType.CIRCADIAN_RHYTHM_DISRUPTION,
-        SeverityLevel.WARNING,
-        LocalDateTime.now().plusDays(1),
-        $userId
+    insert(new Recommendation(
+        "QUALITY_DEFICIT",
+        "Overeating AND critically low fiber — a pattern of high-calorie, low-nutrient eating. Prioritize vegetables, legumes and whole grains at your next meal.",
+        $userId,
+        LocalDateTime.now()
     ));
-    insert(new LateNightEatingPattern($userId, java.time.LocalDate.now(), 1));
 end
 
-rule "CEP Late Night Eating Pattern"
+rule "Rule Late Night Pattern Recommendation"
 when
-    $user : User($userId : id)
-    Number(intValue >= 3) from accumulate(
-        Meal(userId == $userId, (timestamp.getHour() >= 22 || timestamp.getHour() < 6)),
-        count(1)
-    )
-    not LateNightEatingPattern(userId == $userId, lateMealCount >= 3)
+    LateNightEatingPattern($userId : userId, lateMealCount >= 3)
+    not Recommendation(userId == $userId, type == "LATE_NIGHT_EATING_PATTERN")
 then
-    insert(new LateNightEatingPattern($userId, java.time.LocalDate.now(), 3));
     insert(new Recommendation(
         "LATE_NIGHT_EATING_PATTERN",
-        "Detektovana su najmanje 3 kasna obroka. Pomjeri veceru ranije i smanji nocno kalorijsko opterecenje.",
+        "At least 3 late-night meals detected. Move dinner earlier and reduce late-evening caloric load.",
         $userId,
         LocalDateTime.now()
     ));
 end
 
-rule "CEP Binge Pattern"
+// Chain: LateNight + LongFast → compound circadian warning
+rule "Rule Late Night Plus Long Fast Compound Risk"
 when
-    $user : User($userId : id)
-    Number(intValue >= 3) from accumulate(
-        Meal(userId == $userId) over window:time(90m),
-        count(1)
-    )
-    not BingePattern(userId == $userId)
+    LateNightEatingPattern($userId : userId)
+    LongFastDetected(userId == $userId)
+    not Recommendation(userId == $userId, type == "CIRCADIAN_FAST_COMBO")
 then
-    insert(new BingePattern($userId, java.time.LocalDate.now(), 3, 90));
+    insert(new Recommendation(
+        "CIRCADIAN_FAST_COMBO",
+        "Pattern: long daytime fast followed by late-night eating. This circadian mismatch suppresses fat metabolism. Eat more earlier in the day and stop by 20:00.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+rule "Rule Binge Pattern Recommendation"
+when
+    BingePattern($userId : userId)
+    not Recommendation(userId == $userId, type == "BINGE_PATTERN")
+then
     insert(new Recommendation(
         "BINGE_PATTERN",
-        "Uocena su 3 obroka u 90 minuta. Napravi pauzu i planiraj sledeci obrok tek nakon stabilizacije apetita.",
+        "3 meals detected within a 90-minute window — rapid meal clustering. Wait at least 2 hours between meals and let hunger signals reset.",
         $userId,
         LocalDateTime.now()
     ));
-end
-
-rule "Rule Long Fast"
-when
-    $first : Meal($userId : userId, $firstTime : timestamp)
-    $second : Meal(userId == $userId, timestamp.isAfter($firstTime.plusHours(6)), timestamp.getHour() >= 8, timestamp.getHour() <= 22)
-    not LongFastDetected(userId == $userId)
-then
-    insert(new LongFastDetected($userId, java.time.LocalDate.now(), 6));
-    insert(new AnalyticStatus(
-        AnalyticStatusType.LONG_FAST_DETECTED,
-        SeverityLevel.WARNING,
-        LocalDateTime.now().plusDays(1),
-        $userId
-    ));
-    insert(new Recommendation(
-        "LONG_FAST",
-        "Detektovan je razmak veci od 6h izmedju obroka tokom aktivnog dijela dana. Planiraj manju uzinu ili raniji sledeci obrok.",
-        $userId,
-        LocalDateTime.now()
-    ));
-end
-
-rule "CEP Unplanned Snacking"
-when
-    $user : User($userId : id)
-    Number(intValue > 3) from accumulate(
-        Meal(userId == $userId, category == MealCategory.SNACK),
-        count(1)
-    )
-    not UnplannedSnackingPattern(userId == $userId)
-then
-    insert(new UnplannedSnackingPattern($userId, java.time.LocalDate.now(), 4));
 end
 
 rule "Rule Caloric Surplus Accumulation From Snacks"
@@ -429,7 +591,7 @@ when
     )
     not ConsistentProteinDeficit(userId == $userId)
 then
-    insert(new ConsistentProteinDeficit($userId, java.time.LocalDate.now(), 5));
+    insert(new ConsistentProteinDeficit($userId, LocalDate.now(), 5));
 end
 
 rule "Rule Muscle Loss Risk"
@@ -446,6 +608,7 @@ then
     ));
 end
 
+// Chain: MuscleLossRisk + LowProteinMeal → ProteinCritical
 rule "Rule Protein Critical"
 when
     AnalyticStatus($userId : userId, type == AnalyticStatusType.MUSCLE_LOSS_RISK)
@@ -460,7 +623,22 @@ then
     ));
     insert(new Recommendation(
         "PROTEIN_CRITICAL",
-        "Protein je hronicno ispod cilja uz negativan trend tezine. Povecaj dnevni unos proteina da smanjis rizik gubitka misica.",
+        "Protein is chronically below target alongside a negative weight trend. Muscle loss risk is high — immediately increase daily protein to at least 1.6g/kg.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Chain: ProteinCritical + FiberLow → compound nutrition failure
+rule "Rule Protein Critical Plus Fiber Low"
+when
+    AnalyticStatus($userId : userId, type == AnalyticStatusType.PROTEIN_CRITICAL)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.FIBER_CRITICALLY_LOW)
+    not Recommendation(userId == $userId, type == "COMPOUND_NUTRITION_FAILURE")
+then
+    insert(new Recommendation(
+        "COMPOUND_NUTRITION_FAILURE",
+        "CRITICAL: Both protein and fiber are critically low simultaneously. Your diet is nutritionally inadequate — restructure your meal plan and consider consulting a nutrition professional.",
         $userId,
         LocalDateTime.now()
     ));
@@ -471,7 +649,7 @@ when
     $pattern : WeeklyPattern($userId : userId, weightVarianceKg > 0, weightVarianceKg < 0.2)
     not WeightStagnationDetected(userId == $userId)
 then
-    insert(new WeightStagnationDetected($userId, java.time.LocalDate.now(), $pattern.getWeightVarianceKg()));
+    insert(new WeightStagnationDetected($userId, LocalDate.now(), $pattern.getWeightVarianceKg()));
 end
 
 rule "Rule Weight Stagnation Confirmation"
@@ -503,6 +681,7 @@ then
     ));
 end
 
+// Chain: StagnationConfirmed + ExtremeRestriction → CaloricAdaptationBlock
 rule "Rule Caloric Adaptation Block"
 when
     $user : User($userId : id, $bmr : bmr > 0)
@@ -518,9 +697,11 @@ then
     ));
 end
 
+// Chain: CaloricAdaptation or ExtremeRestriction → PlanChangeNeeded
 rule "Rule Plan Change Needed"
 when
-    AnalyticStatus($userId : userId, type in (AnalyticStatusType.CALORIC_ADAPTATION_BLOCK, AnalyticStatusType.EXTREME_CALORIC_RESTRICTION))
+    AnalyticStatus($userId : userId,
+        type in (AnalyticStatusType.CALORIC_ADAPTATION_BLOCK, AnalyticStatusType.EXTREME_CALORIC_RESTRICTION))
     not AnalyticStatus(userId == $userId, type == AnalyticStatusType.PLAN_CHANGE_NEEDED)
 then
     insert(new AnalyticStatus(
@@ -531,33 +712,15 @@ then
     ));
     insert(new Recommendation(
         "PLAN_CHANGE_NEEDED",
-        "Plan zahtijeva rekalibraciju: prisutna je stagnacija ili ekstremna restrikcija kalorija.",
+        "Your plan requires recalibration: weight stagnation or extreme caloric restriction is present. Consider a structured diet break or refeed before continuing.",
         $userId,
         LocalDateTime.now()
     ));
 end
 
-rule "Template Runtime Calorie Surplus"
-when
-    RuleTemplateParameter(ruleName == "Rule_Calorie_Surplus", operator == ">", $percentage : percentage)
-    $user : User($userId : id, $target : targetCalories > 0)
-    $intake : DailyIntake(userId == $userId, totalCalories > ($target * $percentage), status != DailyIntakeStatus.SURPLUS)
-then
-    modify($intake) {
-        setStatus(DailyIntakeStatus.SURPLUS)
-    }
-end
-
-rule "Template Runtime Calorie Deficit"
-when
-    RuleTemplateParameter(ruleName == "Rule_Calorie_Deficit", operator == "<", $percentage : percentage)
-    $user : User($userId : id, $target : targetCalories > 0)
-    $intake : DailyIntake(userId == $userId, totalCalories < ($target * $percentage), totalCalories > 0, status != DailyIntakeStatus.DEFICIT)
-then
-    modify($intake) {
-        setStatus(DailyIntakeStatus.DEFICIT)
-    }
-end
+// ─────────────────────────────────────────────────────────────────────────────
+// QUERIES
+// ─────────────────────────────────────────────────────────────────────────────
 
 query "whyOvereatingDetected"(Long $userId)
     BreakfastSkippingPattern(userId == $userId)
