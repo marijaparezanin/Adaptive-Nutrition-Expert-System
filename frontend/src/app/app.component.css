@@ -181,7 +181,7 @@ h2 { font-size: 1.22rem; }
 }
 
 /* ══════════════════════════════════════════════
-   EXPERT CARD — severity-aware theming
+   EXPERT CARD - severity-aware theming
    ══════════════════════════════════════════════ */
 .expert-card {
   padding: 20px;
@@ -191,25 +191,25 @@ h2 { font-size: 1.22rem; }
   transition: background 0.3s, border-color 0.3s;
 }
 
-/* ok — deep navy (default / no signals) */
+/* ok - deep navy (default / no signals) */
 .expert-card.expert-level-ok {
   color: #fff;
   background: linear-gradient(135deg, #17324d, #1f4568);
   border-color: rgba(255,255,255,0.06);
 }
-/* warning — amber-tinted navy */
+/* warning - amber-tinted navy */
 .expert-card.expert-level-warning {
   color: #fff;
   background: linear-gradient(135deg, #3a2900, #6b4b00);
   border-color: #a07000;
 }
-/* high — deep orange */
+/* high - deep orange */
 .expert-card.expert-level-high {
   color: #fff;
   background: linear-gradient(135deg, #5a2000, #8a3800);
   border-color: #c05000;
 }
-/* critical — deep red */
+/* critical - deep red */
 .expert-card.expert-level-critical {
   color: #fff;
   background: linear-gradient(135deg, #4a0a0a, #7a1010);

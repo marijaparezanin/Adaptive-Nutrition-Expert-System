@@ -93,10 +93,10 @@ const STATUS_LABELS: Record<string, string> = {
   SURPLUS_WITH_DEFICIT_GOAL: 'Surplus vs Goal',
   SNACK_OVERLOAD_CALORIC_RISK: 'Snack Overload',
   FIBER_CRITICALLY_LOW: 'Fiber Critical',
-  LINKED_PATTERN_STAGNATION_RISK: 'Linked Pattern — Stagnation Risk',
+  LINKED_PATTERN_STAGNATION_RISK: 'Linked Pattern - Stagnation Risk',
   WEEKLY_PROTEIN_DEFICIT: 'Weekly Protein Deficit',
   REACTIVE_EATING_CONFIRMED: 'Reactive Eating Cycle Confirmed',
-  GOAL_CONFLICT_ACTIVITY_NEEDED: 'Goal Conflict — Activity Needed'
+  GOAL_CONFLICT_ACTIVITY_NEEDED: 'Goal Conflict - Activity Needed'
 };
 
 const RECOMMENDATION_SEVERITY: Record<string, string> = {
@@ -301,8 +301,8 @@ export class AppComponent implements OnInit {
     if (ev.analyticSeverities?.includes('HIGH')) return 'Attention needed';
     if (ev.analyticStatuses?.length) return 'Signals detected';
     // Goal conflict: surplus when trying to lose weight, or deficit when trying to gain
-    if (this.state.user.goal === 'WEIGHT_LOSS' && ev.dailyStatus === 'SURPLUS') return 'Goal conflict — surplus';
-    if (this.state.user.goal === 'MUSCLE_GAIN' && ev.dailyStatus === 'DEFICIT') return 'Goal conflict — deficit';
+    if (this.state.user.goal === 'WEIGHT_LOSS' && ev.dailyStatus === 'SURPLUS') return 'Goal conflict - surplus';
+    if (this.state.user.goal === 'MUSCLE_GAIN' && ev.dailyStatus === 'DEFICIT') return 'Goal conflict - deficit';
     if (ev.dailyStatus === 'SURPLUS') return 'Caloric surplus';
     if (ev.dailyStatus === 'DEFICIT') return 'Caloric deficit';
     if (ev.dailyStatus === 'MAINTENANCE_STABLE') return 'On target';
@@ -335,7 +335,7 @@ export class AppComponent implements OnInit {
     return '';
   }
 
-  /** Filter out idle boilerplate text — only show if no real signals exist */
+  /** Filter out idle boilerplate text - only show if no real signals exist */
   get expertOpinionText(): string {
     const ev = this.evaluation();
     if (!ev) return '';
@@ -551,7 +551,7 @@ export class AppComponent implements OnInit {
 
     switch (scenario) {
 
-      // ── S1: Goal Conflict — Surplus while goal is WEIGHT_LOSS
+      // ── S1: Goal Conflict - Surplus while goal is WEIGHT_LOSS
       // Fires: Rule_Weight_Loss_Conflict (surplus >10% + WEIGHT_LOSS goal)
       //        CEP Calorie Spike (lunch 1050 kcal > 50% of ~1800 target)
       //        Rule Surplus With Spike Combo → SURPLUS_WITH_DEFICIT_GOAL
@@ -563,7 +563,7 @@ export class AppComponent implements OnInit {
         );
         break;
 
-      // ── S2: Pattern Linkage — Skip breakfast → ENERGY_SHORTAGE → compensatory binge → OVEREATING chain
+      // ── S2: Pattern Linkage - Skip breakfast → ENERGY_SHORTAGE → compensatory binge → OVEREATING chain
       // Fires: CEP Today Breakfast Skipped (1 MealSkipped) → ENERGY_SHORTAGE
       //        Rule Pattern Linkage (ENERGY_SHORTAGE + meal >40% target) → OVEREATING_DETECTED
       //        CEP Late Night Spike (dinner at 22:30, 820 kcal > 30% of target) → CIRCADIAN_RHYTHM_DISRUPTION
@@ -626,11 +626,11 @@ export class AppComponent implements OnInit {
       case 'snackOverload':
         journal.meals.push(
           { name: 'Breakfast', category: 'BREAKFAST', calories: 380, protein: 18, carbohydrates: 45, fat: 10, fiber: 4, sugars: 6, timestamp: `${selectedDate}T08:00:00`, userId: this.state.user.id, processed: false },
-          { name: 'Snack 1 — biscuits', category: 'SNACK', calories: 290, protein: 3, carbohydrates: 40, fat: 12, fiber: 1, sugars: 22, timestamp: `${selectedDate}T10:00:00`, userId: this.state.user.id, processed: false },
-          { name: 'Snack 2 — crisps', category: 'SNACK', calories: 320, protein: 4, carbohydrates: 42, fat: 16, fiber: 1, sugars: 5, timestamp: `${selectedDate}T11:30:00`, userId: this.state.user.id, processed: false },
+          { name: 'Snack 1 - biscuits', category: 'SNACK', calories: 290, protein: 3, carbohydrates: 40, fat: 12, fiber: 1, sugars: 22, timestamp: `${selectedDate}T10:00:00`, userId: this.state.user.id, processed: false },
+          { name: 'Snack 2 - crisps', category: 'SNACK', calories: 320, protein: 4, carbohydrates: 42, fat: 16, fiber: 1, sugars: 5, timestamp: `${selectedDate}T11:30:00`, userId: this.state.user.id, processed: false },
           { name: 'Light lunch', category: 'LUNCH', calories: 440, protein: 20, carbohydrates: 52, fat: 12, fiber: 5, sugars: 6, timestamp: `${selectedDate}T13:00:00`, userId: this.state.user.id, processed: false },
-          { name: 'Snack 3 — chocolate bar', category: 'SNACK', calories: 270, protein: 3, carbohydrates: 36, fat: 13, fiber: 1, sugars: 28, timestamp: `${selectedDate}T15:30:00`, userId: this.state.user.id, processed: false },
-          { name: 'Snack 4 — crackers + cheese', category: 'SNACK', calories: 330, protein: 8, carbohydrates: 30, fat: 18, fiber: 2, sugars: 2, timestamp: `${selectedDate}T17:30:00`, userId: this.state.user.id, processed: false }
+          { name: 'Snack 3 - chocolate bar', category: 'SNACK', calories: 270, protein: 3, carbohydrates: 36, fat: 13, fiber: 1, sugars: 28, timestamp: `${selectedDate}T15:30:00`, userId: this.state.user.id, processed: false },
+          { name: 'Snack 4 - crackers + cheese', category: 'SNACK', calories: 330, protein: 8, carbohydrates: 30, fat: 18, fiber: 2, sugars: 2, timestamp: `${selectedDate}T17:30:00`, userId: this.state.user.id, processed: false }
         );
         break;
 
@@ -681,20 +681,20 @@ export class AppComponent implements OnInit {
         );
         break;
 
-      // ── S9: Balanced optimal day — all signals clear
+      // ── S9: Balanced optimal day - all signals clear
       case 'balancedDay':
         journal.meals.push(
-          { name: 'Oats + berries + egg whites', category: 'BREAKFAST', calories: 410, protein: 26, carbohydrates: 50, fat: 9, fiber: 9, sugars: 12, timestamp: `${selectedDate}T07:30:00`, userId: this.state.user.id, processed: false },
-          { name: 'Chicken + rice + salad', category: 'LUNCH', calories: 570, protein: 44, carbohydrates: 58, fat: 13, fiber: 9, sugars: 4, timestamp: `${selectedDate}T12:30:00`, userId: this.state.user.id, processed: false },
-          { name: 'Greek yogurt + almonds', category: 'SNACK', calories: 220, protein: 18, carbohydrates: 14, fat: 10, fiber: 2, sugars: 8, timestamp: `${selectedDate}T16:00:00`, userId: this.state.user.id, processed: false },
-          { name: 'Salmon + roasted vegetables', category: 'DINNER', calories: 530, protein: 42, carbohydrates: 34, fat: 18, fiber: 9, sugars: 5, timestamp: `${selectedDate}T19:00:00`, userId: this.state.user.id, processed: false }
+          { name: 'Oats + berries + egg whites', category: 'BREAKFAST', calories: 310, protein: 26, carbohydrates: 50, fat: 9, fiber: 9, sugars: 12, timestamp: `${selectedDate}T07:30:00`, userId: this.state.user.id, processed: false },
+          { name: 'Chicken + rice + salad', category: 'LUNCH', calories: 470, protein: 44, carbohydrates: 58, fat: 13, fiber: 9, sugars: 4, timestamp: `${selectedDate}T12:30:00`, userId: this.state.user.id, processed: false },
+          { name: 'Greek yogurt + almonds', category: 'SNACK', calories: 180, protein: 18, carbohydrates: 14, fat: 10, fiber: 2, sugars: 8, timestamp: `${selectedDate}T16:00:00`, userId: this.state.user.id, processed: false },
+          { name: 'Salmon + roasted vegetables', category: 'DINNER', calories: 430, protein: 42, carbohydrates: 34, fat: 18, fiber: 9, sugars: 5, timestamp: `${selectedDate}T19:00:00`, userId: this.state.user.id, processed: false }
         );
         break;
 
       // ── S10: Spec Rule_Pattern_Linkage full showcase
       // Seeds 3 days no breakfast + late-night meals on same days →
       // CEP detects BreakfastSkippingPattern (≥3 MealSkipped) AND LateNightEatingPattern (lateMealCount≥3)
-      // Drools: Rule "Pattern Linkage — Breakfast Skipping Causes Late Night Eating" fires →
+      // Drools: Rule "Pattern Linkage - Breakfast Skipping Causes Late Night Eating" fires →
       //         LINKED_PATTERN_STAGNATION_RISK + Recommendation
       // Also seeds overeating on day 1 → Rule Reactive Eating Confirmed (3-pattern synthesis)
       case 'linkedPatternStagnation':
@@ -792,7 +792,7 @@ export class AppComponent implements OnInit {
               );
             }
           }
-          // Select day 4 (5th low-protein day — the one that triggers the threshold)
+          // Select day 4 (5th low-protein day - the one that triggers the threshold)
           const day4 = new Date(start);
           day4.setDate(start.getDate() + 4);
           this.selectedDate.set(this.toDateKey(day4));
@@ -840,7 +840,7 @@ export class AppComponent implements OnInit {
               { name: 'Light soup dinner', category: 'DINNER', calories: 240, protein: 14, carbohydrates: 28, fat: 7, fiber: 4, sugars: 5, timestamp: `${key}T19:00:00`, userId: this.state.user.id, processed: false }
             );
           }
-          // Select last day — all 7 days feed the WeeklyPattern accumulation
+          // Select last day - all 7 days feed the WeeklyPattern accumulation
           const lastDay = new Date(start);
           lastDay.setDate(start.getDate() + 6);
           this.selectedDate.set(this.toDateKey(lastDay));
@@ -862,7 +862,7 @@ export class AppComponent implements OnInit {
             const j = this.getJournal(key);
             j.meals = [];
             j.skippedMeals = [];
-            // ~550 kcal per day — well below 50% of BMR (~735)
+            // ~550 kcal per day - well below 50% of BMR (~735)
             j.meals.push(
               { name: 'Black coffee', category: 'BREAKFAST', calories: 5, protein: 0, carbohydrates: 1, fat: 0, fiber: 0, sugars: 0, timestamp: `${key}T07:00:00`, userId: this.state.user.id, processed: false },
               { name: 'Salad no dressing', category: 'LUNCH', calories: 180, protein: 4, carbohydrates: 22, fat: 6, fiber: 4, sugars: 4, timestamp: `${key}T13:00:00`, userId: this.state.user.id, processed: false },
@@ -914,7 +914,7 @@ export class AppComponent implements OnInit {
 
     // CEP Breakfast Skipping: derive from actual meal data across the week.
     // A day has a skipped breakfast if no BREAKFAST meal is logged that day.
-    // This replaces the checkbox — the backend accumulate rule over MealSkipped facts does the pattern detection.
+    // This replaces the checkbox - the backend accumulate rule over MealSkipped facts does the pattern detection.
     const derivedSkippedMeals = weekJournals.flatMap((j) => {
       const hasBreakfast = j.meals.some(m => m.category === 'BREAKFAST');
       const hasMeals = j.meals.length > 0;

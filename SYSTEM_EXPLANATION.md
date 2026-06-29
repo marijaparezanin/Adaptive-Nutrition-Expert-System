@@ -492,7 +492,7 @@ public class Recommendation {
    - Day 2: Skips breakfast and dinner
    - Day 3: Skips breakfast
    - Count >= 3 → **BreakfastSkippingPattern detected**
-   - Recommendation: "Don't skip breakfast—it's essential for energy and preventing overeating later."
+   - Recommendation: "Don't skip breakfast-it's essential for energy and preventing overeating later."
 
 6. **Weekly Summary**:
    - Shows all patterns detected this week

@@ -230,35 +230,35 @@ public class NutritionEvaluationController {
         boolean hasWeeklyProteinDeficit = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.WEEKLY_PROTEIN_DEFICIT);
 
         if (hasPlanChange || hasAdaptation) {
-            sb.append("CRITICAL — Metabolic adaptation detected. Your body has adjusted to severe caloric restriction and weight loss has stalled. Further restriction is counterproductive. A structured plan recalibration (diet break, refeed, or calorie cycling) is strongly recommended.");
+            sb.append("CRITICAL - Metabolic adaptation detected. Your body has adjusted to severe caloric restriction and weight loss has stalled. Further restriction is counterproductive. A structured plan recalibration (diet break, refeed, or calorie cycling) is strongly recommended.");
         } else if (hasProteinCritical || hasMuscleLoss) {
-            sb.append("CRITICAL — Chronic protein deficit with negative weight trend detected. The body is catabolizing lean tissue during this deficit. Immediate protein increase is required to prevent muscle loss.");
+            sb.append("CRITICAL - Chronic protein deficit with negative weight trend detected. The body is catabolizing lean tissue during this deficit. Immediate protein increase is required to prevent muscle loss.");
         } else if (hasExtremeRestriction) {
-            sb.append("CRITICAL — Weekly calorie average is below 50% of BMR. This level of restriction causes hormonal disruption, muscle loss, and metabolic slowdown. It is not safe to sustain.");
+            sb.append("CRITICAL - Weekly calorie average is below 50% of BMR. This level of restriction causes hormonal disruption, muscle loss, and metabolic slowdown. It is not safe to sustain.");
         } else if (hasLinkedPattern) {
-            sb.append("CRITICAL — Compound pattern linkage confirmed by expert system: breakfast skipping + late-night eating + weight stagnation are operating as a reinforcing cycle. This three-way pattern is the primary driver of your stagnated progress.");
+            sb.append("CRITICAL - Compound pattern linkage confirmed by expert system: breakfast skipping + late-night eating + weight stagnation are operating as a reinforcing cycle. This three-way pattern is the primary driver of your stagnated progress.");
         } else if (hasReactiveEating) {
-            sb.append("HIGH — Reactive eating pattern confirmed: daytime energy restriction is directly causing late-night caloric compensation. The expert system traced the causal chain through ENERGY_SHORTAGE → CIRCADIAN_DISRUPTION → late-night intake.");
+            sb.append("HIGH - Reactive eating pattern confirmed: daytime energy restriction is directly causing late-night caloric compensation. The expert system traced the causal chain through ENERGY_SHORTAGE → CIRCADIAN_DISRUPTION → late-night intake.");
         } else if (hasGoalConflictActivity) {
-            sb.append("HIGH — Goal conflict: sustained caloric surplus detected while pursuing weight loss. The expert system recommends adding physical activity or reducing daily intake by 300-400 kcal to restore the required deficit.");
+            sb.append("HIGH - Goal conflict: sustained caloric surplus detected while pursuing weight loss. The expert system recommends adding physical activity or reducing daily intake by 300-400 kcal to restore the required deficit.");
         } else if (hasWeeklyProteinDeficit) {
-            sb.append("HIGH — Chronic weekly protein deficit confirmed. Protein intake has been below 80% of target across the entire week. Muscle protein synthesis is compromised — restructure meals to prioritize protein at each sitting.");
+            sb.append("HIGH - Chronic weekly protein deficit confirmed. Protein intake has been below 80% of target across the entire week. Muscle protein synthesis is compromised - restructure meals to prioritize protein at each sitting.");
         } else if (hasOvereating && hasEnergyShortage) {
-            sb.append("HIGH ALERT — The expert system traced a meal-skipping → compensatory overeating chain. Skipped meals caused energy depletion (ENERGY_SHORTAGE), which triggered a large reactive meal. This pattern is self-reinforcing and undermines your goal. Regular meal timing is key.");
+            sb.append("HIGH ALERT - The expert system traced a meal-skipping → compensatory overeating chain. Skipped meals caused energy depletion (ENERGY_SHORTAGE), which triggered a large reactive meal. This pattern is self-reinforcing and undermines your goal. Regular meal timing is key.");
         } else if (hasSurplus && hasCritical) {
-            sb.append("HIGH — Caloric surplus is accumulating and conflicts with your current goal. Review portion sizes and meal composition for the remainder of the day.");
+            sb.append("HIGH - Caloric surplus is accumulating and conflicts with your current goal. Review portion sizes and meal composition for the remainder of the day.");
         } else if (hasCircadian) {
-            sb.append("WARNING — Late-night caloric loading detected. Consuming >30% of daily calories after 22:00 disrupts circadian rhythm, degrades sleep quality, and promotes adipose storage over metabolic use.");
+            sb.append("WARNING - Late-night caloric loading detected. Consuming >30% of daily calories after 22:00 disrupts circadian rhythm, degrades sleep quality, and promotes adipose storage over metabolic use.");
         } else if (hasStagnation) {
-            sb.append("WARNING — Weight stagnation detected while in a caloric deficit. Metabolic adaptation is likely. Consider a structured refeed day or adjusting your calorie cycling strategy.");
+            sb.append("WARNING - Weight stagnation detected while in a caloric deficit. Metabolic adaptation is likely. Consider a structured refeed day or adjusting your calorie cycling strategy.");
         } else if (hasSurplus) {
-            sb.append("WARNING — Today's intake exceeds your daily target. Adjust remaining meals accordingly.");
+            sb.append("WARNING - Today's intake exceeds your daily target. Adjust remaining meals accordingly.");
         } else if (hasHigh) {
-            sb.append("Nutritional imbalances flagged. The expert system has generated signals that require attention — see analytic statuses and recommendations below.");
+            sb.append("Nutritional imbalances flagged. The expert system has generated signals that require attention - see analytic statuses and recommendations below.");
         } else if (statuses.isEmpty()) {
             sb.append("No active expert signals. Your nutrition data for this day appears balanced. Continue logging consistently to enable multi-day pattern detection.");
         } else {
-            sb.append("Monitoring active. Low-priority nutrition signals present — keep logging to enable deeper pattern analysis over the coming days.");
+            sb.append("Monitoring active. Low-priority nutrition signals present - keep logging to enable deeper pattern analysis over the coming days.");
         }
 
         // Caloric context
@@ -286,7 +286,7 @@ public class NutritionEvaluationController {
         double remaining = response.getCaloriesRemaining();
         if (pct == 0) return "No meals logged yet. Daily target: " + Math.round(response.getTargetCalories()) + " kcal.";
         if (pct < 50) return String.format("Very low intake: %.0f%% of target (%.0f kcal consumed, %.0f kcal remaining). Risk of extreme restriction.", pct, response.getTotalCalories(), remaining);
-        if (pct < 70) return String.format("Under-eating: %.0f%% of target. %.0f kcal remaining — add a balanced meal.", pct, remaining);
+        if (pct < 70) return String.format("Under-eating: %.0f%% of target. %.0f kcal remaining - add a balanced meal.", pct, remaining);
         if (pct <= 110) return String.format("On track: %.0f%% of daily target. %.0f kcal remaining.", pct, Math.max(0, remaining));
         if (pct <= 130) return String.format("Slightly over: %.0f%% of target (%.0f kcal over goal). Plan lighter remaining meals.", pct, Math.abs(remaining));
         return String.format("Significantly over: %.0f%% of target (%.0f kcal over). This conflicts with your %s goal.", pct, Math.abs(remaining),
@@ -300,7 +300,7 @@ public class NutritionEvaluationController {
         double remaining = response.getProteinRemaining();
         if (pct == 0) return "No protein logged. Target: " + Math.round(response.getTargetProtein()) + "g/day.";
         if (pct < 50) return String.format("Critical protein gap: %.0f%% of target (%.0f g consumed, %.0f g remaining). Muscle preservation at risk.", pct, response.getTotalProtein(), remaining);
-        if (pct < 80) return String.format("Protein deficit: %.0f%% of target. Add lean meat, eggs, dairy, or legumes — %.0f g still needed.", pct, remaining);
+        if (pct < 80) return String.format("Protein deficit: %.0f%% of target. Add lean meat, eggs, dairy, or legumes - %.0f g still needed.", pct, remaining);
         if (pct <= 120) return String.format("Good protein intake: %.0f%% of target. %.0f g remaining.", pct, Math.max(0, remaining));
         return String.format("High protein intake: %.0f%% of target. Ensure adequate hydration.", pct);
     }
@@ -313,7 +313,7 @@ public class NutritionEvaluationController {
         if (pct == 0) return "No fiber logged. Target: " + Math.round(response.getTargetFiber()) + "g/day. Add vegetables, legumes, whole grains.";
         if (pct < 60) return String.format("Low fiber: %.0f%% of target (%.0f g remaining). Prioritize vegetables and whole grains.", pct, remaining);
         if (pct < 90) return String.format("Moderate fiber: %.0f%% of target. %.0f g more from plant foods recommended.", pct, remaining);
-        if (pct <= 120) return String.format("Good fiber intake: %.0f%% of target — supporting digestive health.", pct);
+        if (pct <= 120) return String.format("Good fiber intake: %.0f%% of target - supporting digestive health.", pct);
         return String.format("Excellent fiber: %.0f%% of target. Maintain good hydration.", pct);
     }
 
@@ -349,7 +349,7 @@ public class NutritionEvaluationController {
         }
         if (pattern instanceof WeightStagnationDetected) {
             WeightStagnationDetected p = (WeightStagnationDetected) pattern;
-            return String.format("Weight Stagnation (%.2f kg variance): Weight has barely changed over the tracking period. If fat loss is the goal, the body has adapted — consider a structured refeed day or calorie cycling rather than further restriction.", p.getVarianceKg());
+            return String.format("Weight Stagnation (%.2f kg variance): Weight has barely changed over the tracking period. If fat loss is the goal, the body has adapted - consider a structured refeed day or calorie cycling rather than further restriction.", p.getVarianceKg());
         }
         if (pattern instanceof LongFastDetected) {
             LongFastDetected p = (LongFastDetected) pattern;
@@ -357,7 +357,7 @@ public class NutritionEvaluationController {
         }
         if (pattern instanceof MissedMealAlert) {
             MissedMealAlert p = (MissedMealAlert) pattern;
-            return String.format("Missed Meal — %s (%dh past expected time): The pseudo-clock simulation flagged that no %s was logged by end of day. This pattern, when recurring, significantly disrupts daily energy distribution.", p.getMissedCategory(), p.getHoursPastExpected(), p.getMissedCategory().toLowerCase());
+            return String.format("Missed Meal - %s (%dh past expected time): The pseudo-clock simulation flagged that no %s was logged by end of day. This pattern, when recurring, significantly disrupts daily energy distribution.", p.getMissedCategory(), p.getHoursPastExpected(), p.getMissedCategory().toLowerCase());
         }
         return "";
     }

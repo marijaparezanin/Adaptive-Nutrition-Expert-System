@@ -172,7 +172,7 @@ Or: Check that CEP is enabled in kmodule.xml
 - Don't forget to explain why system is "expert"
 
 ### Strong Opening
-"This system demonstrates how expert systems and CEP can create intelligent nutrition coaching. Unlike static calorie counters, it detects behavioral patterns across days—when breakfast is skipped 3 times, when meals cluster late at night, when eating is extreme in either direction. Then it generates personalized guidance based on the user's specific goals."
+"This system demonstrates how expert systems and CEP can create intelligent nutrition coaching. Unlike static calorie counters, it detects behavioral patterns across days-when breakfast is skipped 3 times, when meals cluster late at night, when eating is extreme in either direction. Then it generates personalized guidance based on the user's specific goals."
 
 ### Strong Closing
 "The innovation here is combining rule-based reasoning with temporal event processing. Any developer could add a new pattern type by just adding a row to a CSV file. The system remains intelligent and adaptive without code changes. This is scalable intelligence."
@@ -291,16 +291,16 @@ The intelligence comes from two things: rule-based reasoning for individual meal
 1. The frontend sends your data to the backend
 2. The backend creates a rules session
 3. It inserts facts (user, meals, daily totals, weekly patterns)
-4. Rules fire in order—first calculating totals, then checking status, then detecting patterns
+4. Rules fire in order-first calculating totals, then checking status, then detecting patterns
 5. The results come back and display on your dashboard
 
-The patterns use Complex Event Processing—that means it watches events over time windows. A single late meal isn't a pattern. But 3 late meals in a week? That triggers the system to generate guidance."
+The patterns use Complex Event Processing-that means it watches events over time windows. A single late meal isn't a pattern. But 3 late meals in a week? That triggers the system to generate guidance."
 
 ### Why It Matters (1 minute)
 "Most nutrition apps just sum calories. This system has intelligence. It recognizes behavior. It learns your patterns. And it gives guidance tailored to your specific goals. If you're trying to lose weight, eating 800 calories might be a deficit recommendation. If you're bulking, the same intake is undereating and needs adjustment."
 
 ### Innovation (1 minute)
-"The innovation here is in the architecture. Adding a new pattern type doesn't mean coding new rules. We add a row to the CSV file, the template generator creates the rule, and boom—new intelligence without touching the codebase. This is scalable, maintainable intelligence."
+"The innovation here is in the architecture. Adding a new pattern type doesn't mean coding new rules. We add a row to the CSV file, the template generator creates the rule, and boom-new intelligence without touching the codebase. This is scalable, maintainable intelligence."
 
 ---
 
@@ -361,7 +361,7 @@ The patterns use Complex Event Processing—that means it watches events over ti
 4. Show code instead: "Here's the rule that detects it"
 
 **If Evaluator Asks Question You Don't Know**:
-1. "Great question—let me think about that"
+1. "Great question-let me think about that"
 2. Take a breath, pause
 3. Give honest answer: "I'm not sure, but here's what I would do..."
 4. Don't make things up
@@ -373,7 +373,7 @@ The patterns use Complex Event Processing—that means it watches events over ti
 1. **Knows Goals**: Adapts to weight loss, maintenance, muscle gain
 2. **Calculates Targets**: Uses proper formulas (BMR, TDEE, macros)
 3. **Detects Patterns**: CEP recognizes behavior across time
-4. **Generates Recommendations**: Not generic—specific to situation
+4. **Generates Recommendations**: Not generic-specific to situation
 5. **Learns**: The more data logged, the better guidance
 6. **Explains Itself**: Shows which rules fired, why recommendation given
 

@@ -29,7 +29,7 @@ import com.ftn.sbnz.model.models.WeeklyPattern;
 import com.ftn.sbnz.model.models.WeightStagnationDetected;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 0 — INITIALIZATION (salience 100-95)
+// TIER 0 - INITIALIZATION (salience 100-95)
 // ─────────────────────────────────────────────────────────────────────────────
 
 rule "Initialize user target values"
@@ -56,15 +56,15 @@ then
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 1 — MEAL PROCESSING (salience 90)
+// TIER 1 - MEAL PROCESSING (salience 90)
 // ─────────────────────────────────────────────────────────────────────────────
 
 // NOTE: DailyIntake arrives pre-aggregated from the frontend (totalCalories/totalProtein/totalFiber
-// already set). We do NOT re-aggregate here — that would double-count. Individual Meal facts are
+// already set). We do NOT re-aggregate here - that would double-count. Individual Meal facts are
 // inserted solely for CEP pattern detection (late-night check, binge cluster, long fast, etc.).
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 2 — SINGLE-MEAL SIGNALS
+// TIER 2 - SINGLE-MEAL SIGNALS
 // ─────────────────────────────────────────────────────────────────────────────
 
 rule "Rule Low Protein Meal"
@@ -82,7 +82,7 @@ end
 
 rule "Rule Protein Warning"
 when
-    $meal : Meal($userId : userId, protein < 20)
+    $meal : Meal($userId : userId, protein < 10)
     not AnalyticStatus(userId == $userId, type == AnalyticStatusType.PROTEIN_WARNING)
 then
     insert(new AnalyticStatus(
@@ -93,7 +93,7 @@ then
     ));
     insert(new Recommendation(
         "LOW_PROTEIN_MEAL",
-        "A meal contains less than 20g protein. Add eggs, meat, fish, dairy or another protein source.",
+        "A meal contains less than 10g protein. Add eggs, meat, fish, dairy or another protein source.",
         $userId,
         LocalDateTime.now()
     ));
@@ -141,7 +141,7 @@ then
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 3 — DAILY INTAKE SIGNALS
+// TIER 3 - DAILY INTAKE SIGNALS
 // ─────────────────────────────────────────────────────────────────────────────
 
 rule "Rule Protein Floor"
@@ -234,7 +234,7 @@ then
     ));
     insert(new Recommendation(
         "SURPLUS_SPIKE_COMBO",
-        "You are in caloric surplus AND had a calorie spike meal — a compounding risk for weight loss. Reassess your meal plan for the rest of the day.",
+        "You are in caloric surplus AND had a calorie spike meal which is a compounding risk for weight loss. Reassess your meal plan for the rest of the day.",
         $userId,
         LocalDateTime.now()
     ));
@@ -261,7 +261,7 @@ then
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 4 — CEP PATTERN DETECTION
+// TIER 4 - CEP PATTERN DETECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
 // BingePattern: 3+ meals within a strict 90-minute FORWARD window from an anchor meal.
@@ -295,7 +295,7 @@ then
     insert(new UnplannedSnackingPattern($userId, LocalDate.now(), 4));
 end
 
-// LateNightEatingPattern from WeeklyPattern — the frontend pre-counts late meals across the week.
+// LateNightEatingPattern from WeeklyPattern - the frontend pre-counts late meals across the week.
 // The spec threshold is: 3+ late meals (22h-06h) in a 7-day window.
 // We use WeeklyPattern.lateMealCount (pre-aggregated) to detect the weekly pattern.
 rule "CEP Late Night Eating Weekly Pattern"
@@ -333,13 +333,30 @@ end
 // $first must be before $second (timestamp.isBefore) and gap must exceed 6 hours.
 rule "Rule Long Fast"
 when
-    $first : Meal($userId : userId, $firstTime : timestamp,
-                  timestamp.getHour() >= 7, timestamp.getHour() <= 22)
-    $second : Meal(userId == $userId,
-                   this != $first,
-                   timestamp.isAfter($firstTime.plusHours(6)),
-                   timestamp.getHour() >= 7,
-                   timestamp.getHour() <= 22)
+    $first : Meal(
+        $userId : userId,
+        $firstTime : timestamp,
+        timestamp.getHour() >= 7,
+        timestamp.getHour() <= 22
+    )
+
+    $second : Meal(
+        userId == $userId,
+        this != $first,
+        $secondTime : timestamp,
+        timestamp.isAfter($firstTime.plusHours(6)),
+        timestamp.getHour() >= 7,
+        timestamp.getHour() <= 22
+    )
+
+    not Meal(
+        userId == $userId,
+        this != $first,
+        this != $second,
+        timestamp.isAfter($firstTime),
+        timestamp.isBefore($secondTime)
+    )
+
     not LongFastDetected(userId == $userId)
 then
     insert(new LongFastDetected($userId, LocalDate.now(), 6));
@@ -357,7 +374,7 @@ then
     ));
 end
 
-// CEP Missed Meal — frontend inserts MissedMealAlert facts when "End Day" is pressed
+// CEP Missed Meal - frontend inserts MissedMealAlert facts when "End Day" is pressed
 rule "CEP Missed Breakfast Detected"
 when
     $user : User($userId : id)
@@ -449,14 +466,14 @@ then
     ));
     insert(new Recommendation(
         "BREAKFAST_SKIPPED_TODAY",
-        "No breakfast was logged today. Skipping breakfast elevates cortisol and drives compensatory overeating later — typically 20-30% more calories at subsequent meals.",
+        "No breakfast was logged today. Skipping breakfast elevates cortisol and drives compensatory overeating later - typically 20-30% more calories at subsequent meals.",
         $userId,
         LocalDateTime.now()
     ));
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 5 — MULTI-DAY / PATTERN SIGNALS
+// TIER 5 - MULTI-DAY / PATTERN SIGNALS
 // ─────────────────────────────────────────────────────────────────────────────
 
 rule "Rule Weight Loss Activity Recommendation"
@@ -505,7 +522,7 @@ then
     ));
     insert(new Recommendation(
         "PROTEIN_DISTRIBUTION",
-        "4 or more meals have been low in protein. Spread intake evenly — every meal should hit at least 20g.",
+        "4 or more meals have been low in protein. Spread intake evenly - every meal should hit at least 20g.",
         $userId,
         LocalDateTime.now()
     ));
@@ -561,7 +578,7 @@ when
 then
     insert(new Recommendation(
         "QUALITY_DEFICIT",
-        "Overeating AND critically low fiber — a pattern of high-calorie, low-nutrient eating. Prioritize vegetables, legumes and whole grains at your next meal.",
+        "Overeating AND critically low fiber - a pattern of high-calorie, low-nutrient eating. Prioritize vegetables, legumes and whole grains at your next meal.",
         $userId,
         LocalDateTime.now()
     ));
@@ -602,7 +619,7 @@ when
 then
     insert(new Recommendation(
         "BINGE_PATTERN",
-        "3 meals detected within a 90-minute window — rapid meal clustering. Wait at least 2 hours between meals and let hunger signals reset.",
+        "3 meals detected within a 90-minute window - rapid meal clustering. Wait at least 2 hours between meals and let hunger signals reset.",
         $userId,
         LocalDateTime.now()
     ));
@@ -664,7 +681,7 @@ then
     ));
     insert(new Recommendation(
         "PROTEIN_CRITICAL",
-        "Protein is chronically below target alongside a negative weight trend. Muscle loss risk is high — immediately increase daily protein to at least 1.6g/kg.",
+        "Protein is chronically below target alongside a negative weight trend. Muscle loss risk is high - immediately increase daily protein to at least 1.6g/kg.",
         $userId,
         LocalDateTime.now()
     ));
@@ -679,7 +696,7 @@ when
 then
     insert(new Recommendation(
         "COMPOUND_NUTRITION_FAILURE",
-        "CRITICAL: Both protein and fiber are critically low simultaneously. Your diet is nutritionally inadequate — restructure your meal plan and consider consulting a nutrition professional.",
+        "CRITICAL: Both protein and fiber are critically low simultaneously. Your diet is nutritionally inadequate - restructure your meal plan and consider consulting a nutrition professional.",
         $userId,
         LocalDateTime.now()
     ));
@@ -760,7 +777,7 @@ then
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TIER 7 — COMPOUND PATTERN SYNTHESIS (spec Rule_Pattern_Linkage and variants)
+// TIER 7 - COMPOUND PATTERN SYNTHESIS (spec Rule_Pattern_Linkage and variants)
 // These rules fire AFTER lower-tier AnalyticStatus facts are already in working memory.
 // Forward chaining: Tier2/3/5 facts → Tier7 compound conclusions.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -784,7 +801,7 @@ then
     insert(new Recommendation(
         "LINKED_PATTERN_STAGNATION",
         "Compound pattern detected: breakfast skipping + late-night eating + weight stagnation. " +
-        "These three patterns reinforce each other — morning restriction shifts your caloric load to the evening, " +
+        "These three patterns reinforce each other - morning restriction shifts your caloric load to the evening, " +
         "disrupting circadian metabolism and halting weight loss. Break the cycle: eat within 1 hour of waking.",
         $userId,
         LocalDateTime.now()
@@ -832,7 +849,7 @@ then
     insert(new Recommendation(
         "REACTIVE_EATING_SYNTHESIS",
         "Reactive eating confirmed: daytime energy restriction is directly driving late-night overeating. " +
-        "This is not a willpower issue — your hunger hormones (ghrelin) peak after prolonged restriction. " +
+        "This is not a willpower issue - your hunger hormones (ghrelin) peak after prolonged restriction. " +
         "Eat a balanced 400-500 kcal meal before 12:00 to reset your appetite rhythm.",
         $userId,
         LocalDateTime.now()
@@ -888,7 +905,7 @@ then
     insert(new Recommendation(
         "FAST_CIRCADIAN_COMBO",
         "Prolonged daytime fasting combined with late-night eating creates a double circadian disruption. " +
-        "This pattern suppresses leptin, elevates cortisol, and promotes fat storage — even without a caloric surplus. " +
+        "This pattern suppresses leptin, elevates cortisol, and promotes fat storage - even without a caloric surplus. " +
         "Align eating with daylight hours: first meal before 09:00, last meal before 20:00.",
         $userId,
         LocalDateTime.now()

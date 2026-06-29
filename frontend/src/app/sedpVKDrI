@@ -90,7 +90,7 @@
           <p>{{ evaluation()?.expertOpinionSummary }}</p>
         </div>
         <div class="expert-summary summary-idle" *ngIf="!evaluation()?.expertOpinionSummary && !loading()">
-          <p>Connect to the backend and log meals — the Drools engine will analyse your intake and flag patterns in real time.</p>
+          <p>Connect to the backend and log meals - the Drools engine will analyse your intake and flag patterns in real time.</p>
         </div>
 
         <!-- Macro status reasons -->

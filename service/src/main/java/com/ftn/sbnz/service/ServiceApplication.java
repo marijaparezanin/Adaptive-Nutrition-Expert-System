@@ -48,16 +48,11 @@ public class ServiceApplication {
             kfs.write("src/main/resources/rules/nutrition_rules.drl",
                     ks.getResources().newInputStreamResource(staticRules));
         } else {
-            System.err.println("WARNING: /rules/nutrition-rules.drl not found on classpath — main rules will not be loaded!");
+            System.err.println("WARNING: /rules/nutrition-rules.drl not found on classpath - main rules will not be loaded!");
         }
 
         String calorieDrl = compileTemplate("/templates/calorie-balance.csv", "/templates/calorie-balance.drt");
         kfs.write("src/main/resources/rules/compiled_calorie_rules.drl", calorieDrl);
-
-        String temporalDrl = compileTemplate("/templates/temporal-patterns.csv", "/templates/temporal-patterns.drt");
-        if (temporalDrl != null && !temporalDrl.isBlank()) {
-            kfs.write("src/main/resources/rules/compiled_temporal_rules.drl", temporalDrl);
-        }
 
         KieBuilder kieBuilder = ks.newKieBuilder(kfs);
         kieBuilder.buildAll();
@@ -70,7 +65,7 @@ public class ServiceApplication {
         List<Map<String, Object>> mappedData;
         try (InputStream csvStream = getClass().getResourceAsStream(csvPath)) {
             if (csvStream == null) {
-                System.err.println("WARNING: Could not find CSV file: " + csvPath + " — skipping template.");
+                System.err.println("WARNING: Could not find CSV file: " + csvPath + " - skipping template.");
                 return "";
             }
             mappedData = parseCsvToMap(csvStream);
@@ -78,9 +73,9 @@ public class ServiceApplication {
             throw new RuntimeException("Error processing CSV data from " + csvPath, e);
         }
 
-        // If no data rows, skip compilation — produces invalid DRL with empty template body
+        // If no data rows, skip compilation - produces invalid DRL with empty template body
         if (mappedData.isEmpty()) {
-            System.out.println("INFO: No data rows in " + csvPath + " — skipping template compilation.");
+            System.out.println("INFO: No data rows in " + csvPath + " - skipping template compilation.");
             return "";
         }
 

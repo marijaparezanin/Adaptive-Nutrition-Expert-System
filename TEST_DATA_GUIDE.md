@@ -259,7 +259,7 @@ Daily Total: 2100 kcal, 170g Protein
 
 **Recommendations Generated**:
 - "Great job hitting protein targets! This supports muscle growth and recovery."
-- "Distributed meals well throughout day—this supports muscle protein synthesis."
+- "Distributed meals well throughout day-this supports muscle protein synthesis."
 - Calorie status message (surplus/maintenance)
 
 **Use Case**:

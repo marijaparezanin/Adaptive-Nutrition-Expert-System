@@ -10,7 +10,7 @@ public class MissedMealAlert extends NutritionPattern {
     public MissedMealAlert() {}
 
     public MissedMealAlert(Long userId, LocalDate detectedAt, String missedCategory, int hoursPastExpected) {
-        super(userId, detectedAt, "No " + missedCategory + " logged — " + hoursPastExpected + "h past expected time");
+        super(userId, detectedAt, "No " + missedCategory + " logged - " + hoursPastExpected + "h past expected time");
         this.missedCategory = missedCategory;
         this.hoursPastExpected = hoursPastExpected;
     }

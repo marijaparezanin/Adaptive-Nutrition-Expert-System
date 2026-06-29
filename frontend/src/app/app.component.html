@@ -88,12 +88,12 @@
           </div>
         </div>
 
-        <!-- Expert summary paragraph — suppress idle text when signals exist -->
+        <!-- Expert summary paragraph - suppress idle text when signals exist -->
         <div class="expert-summary" *ngIf="expertOpinionText" [class]="'summary-' + expertOpinionLevel">
           <p>{{ expertOpinionText }}</p>
         </div>
         <div class="expert-summary summary-idle" *ngIf="!evaluation() && !loading()">
-          <p>Connect to the backend and log meals — the Drools engine will analyse your intake and flag patterns in real time.</p>
+          <p>Connect to the backend and log meals - the Drools engine will analyse your intake and flag patterns in real time.</p>
         </div>
 
         <!-- Macro status reasons -->
@@ -139,7 +139,7 @@
           </div>
         </div>
 
-        <!-- Recommendations — suppress idle text when none -->
+        <!-- Recommendations - suppress idle text when none -->
         <div class="alert-list" *ngIf="hasRealRecommendations">
           <h4 class="section-label">
             <span>Recommendations</span>
@@ -232,7 +232,7 @@
 
         <!-- Backend-derived breakfast skip indicator: appears only when CEP engine generates ENERGY_SHORTAGE -->
         <div class="breakdown-row skipped-row" *ngIf="!hasBreakfastMeal && selectedMeals.length > 0 && !hasEnergyShortageSignal">
-          <span>ℹ No breakfast logged — CEP engine will derive MealSkipped and evaluate for patterns</span>
+          <span>ℹ No breakfast logged - CEP engine will derive MealSkipped and evaluate for patterns</span>
         </div>
       </article>
 
@@ -248,7 +248,7 @@
         </div>
 
         <div class="test-scenarios">
-          <p class="eyebrow">Demo scenarios — showcase expert system rules (replaces selected day)</p>
+          <p class="eyebrow">Demo scenarios - showcase expert system rules (replaces selected day)</p>
           <p class="scenario-group-label">📋 Daily patterns</p>
           <div class="scenario-buttons">
             <button type="button" class="scenario-btn" (click)="loadTestScenario('surplusVsGoal')" title="Rules: Rule_Weight_Loss_Conflict + CEP Calorie Spike → SURPLUS_WITH_DEFICIT_GOAL chain">⚖ Surplus vs Goal</button>
@@ -258,7 +258,7 @@
             <button type="button" class="scenario-btn" (click)="loadTestScenario('longFastLowProtein')" title="Rules: CEP Long Fast (07:00→17:00 = 10h gap) → LONG_FAST_DETECTED + Low Protein Meal signals">⏱ Long Fast + Low Protein</button>
             <button type="button" class="scenario-btn" (click)="loadTestScenario('snackOverload')" title="Rules: CEP Unplanned Snacking (4 snacks) → SNACK_OVERLOAD_CALORIC_RISK chain">🍪 Snack Overload</button>
             <button type="button" class="scenario-btn" (click)="loadTestScenario('fiberCrisis')" title="Rules: FIBER_CRITICALLY_LOW (6g total) + caloric surplus → QUALITY_DEFICIT compound recommendation">🌾 Fiber Crisis</button>
-            <button type="button" class="scenario-btn" (click)="loadTestScenario('balancedDay')" title="All nutrition targets met — verifies system correctly reports no signals">✅ Optimal Day</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('balancedDay')" title="All nutrition targets met - verifies system correctly reports no signals">✅ Optimal Day</button>
           </div>
           <p class="scenario-group-label">📅 Multi-day & weekly CEP chains</p>
           <div class="scenario-buttons">
@@ -323,7 +323,7 @@
           <button class="primary-button" type="submit">Add meal</button>
         </form>
 
-        <p class="form-note">Breakfast skipping is detected automatically from meal data — no manual marking needed. Log meals across the week and the CEP engine will identify the pattern.</p>
+        <p class="form-note">Breakfast skipping is detected automatically from meal data - no manual marking needed. Log meals across the week and the CEP engine will identify the pattern.</p>
       </article>
 
       <!-- ══════════════════════════════════════

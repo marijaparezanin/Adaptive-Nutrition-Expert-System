@@ -259,7 +259,7 @@ calorie-balance.drl (Generated output)
      - LateNightEatingPattern
 
 **Explain What Happened**:
-"The CEP detected a pattern across 3 days. Instead of just looking at today, Drools has a 7-day time window. When 3 events (late meals) accumulate within that window, the pattern rule triggers. This is the power of CEP—it correlates events across time."
+"The CEP detected a pattern across 3 days. Instead of just looking at today, Drools has a 7-day time window. When 3 events (late meals) accumulate within that window, the pattern rule triggers. This is the power of CEP-it correlates events across time."
 
 **Live Demo - Option B (Pseudo Clock - Fallback)**:
 
@@ -289,7 +289,7 @@ Recommendation: "Consider eating earlier."
 ```
 
 **Key Insight to Emphasize**:
-"This is what makes it 'expert'—not just rules, but temporal reasoning. The system doesn't just see today's calories; it sees patterns unfolding over days."
+"This is what makes it 'expert'-not just rules, but temporal reasoning. The system doesn't just see today's calories; it sees patterns unfolding over days."
 
 ---
 
@@ -469,11 +469,11 @@ project/
 
 ### Q1: "What if I want to add a new pattern type?"
 **Answer**: 
-"You add a row to the CSV template file with the new pattern conditions. The generator reads it and creates a new rule. No Java code changes needed. For example, to detect 'frequent snacking,' you'd add a row specifying 'more than 4 snacks per day'—the rule generates automatically."
+"You add a row to the CSV template file with the new pattern conditions. The generator reads it and creates a new rule. No Java code changes needed. For example, to detect 'frequent snacking,' you'd add a row specifying 'more than 4 snacks per day'-the rule generates automatically."
 
 ### Q2: "How does it handle incorrect user input?"
 **Answer**:
-"The frontend validates all numeric inputs (non-negative). For backend, if meal calories are zero, they're simply ignored by most rules. The system is fault-tolerant—if one field is missing, others still process normally."
+"The frontend validates all numeric inputs (non-negative). For backend, if meal calories are zero, they're simply ignored by most rules. The system is fault-tolerant-if one field is missing, others still process normally."
 
 ### Q3: "Can it handle multiple users?"
 **Answer**:
