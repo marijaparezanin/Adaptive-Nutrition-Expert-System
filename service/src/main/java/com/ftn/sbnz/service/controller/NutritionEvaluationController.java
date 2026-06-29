@@ -187,8 +187,18 @@ public class NutritionEvaluationController {
     private List<String> buildReasoningTrace(NutritionEvaluationResponse response, DailyIntake dailyIntake, User user) {
         List<String> trace = new ArrayList<>();
         if (user != null) {
+            double tdee = response.getBmr() * user.getActivityFactor();
+            double adjustment = response.getTargetCalories() - tdee;
+            String adjustmentStr = adjustment < 0
+                ? String.format("−%.0f deficit", Math.abs(adjustment))
+                : adjustment > 0
+                    ? String.format("+%.0f surplus", adjustment)
+                    : "no adjustment";
             trace.add(String.format("BMR: %.0f kcal (Mifflin-St Jeor)", response.getBmr()));
-            trace.add(String.format("Daily target: %.0f kcal (BMR × %.2f activity, goal-adjusted)", response.getTargetCalories(), user.getActivityFactor()));
+            trace.add(String.format("TDEE: %.0f kcal (BMR × %.2f activity factor)", tdee, user.getActivityFactor()));
+            trace.add(String.format("Daily target: %.0f kcal (TDEE %s for %s goal)",
+                response.getTargetCalories(), adjustmentStr,
+                user.getGoal() != null ? user.getGoal().name().toLowerCase().replace('_', ' ') : "maintenance"));
             trace.add(String.format("Protein target: %.0f g/day (%.1f g/kg)", response.getTargetProtein(), user.getTargetProtein() / Math.max(1, user.getWeight())));
             trace.add(String.format("Fiber target: %.0f g/day", response.getTargetFiber()));
         }

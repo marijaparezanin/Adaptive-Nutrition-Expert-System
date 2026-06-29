@@ -875,6 +875,96 @@ export class AppComponent implements OnInit {
           this.selectedDate.set(this.toDateKey(lastDay));
         }
         break;
+
+      // ── S13: Healthy Week — 28F, 78kg, weight loss, 1602 kcal / 109g protein / 25g fiber
+      // Each day: breakfast by 08:30, lunch ~12:30, dinner by 19:30, no late eating.
+      // Calories 1480-1620 (within 10% of target), protein 105-115g, fiber 25-30g.
+      // Expected: no rules fire, expert opinion "All clear / On target", no patterns detected.
+      case 'healthyWeek':
+        {
+          const start = new Date(this.weekStart());
+
+          // Mon: Greek yogurt bowl + grilled chicken salad + salmon + rice
+          const day0meals = [
+            { name: 'Greek yogurt with berries & granola', category: 'BREAKFAST' as const, calories: 320, protein: 22, carbohydrates: 38, fat: 7, fiber: 4, sugars: 18, timestamp: `${this.toDateKey(new Date(start))}T08:00:00` },
+            { name: 'Grilled chicken salad + olive oil', category: 'LUNCH' as const, calories: 480, protein: 40, carbohydrates: 22, fat: 18, fiber: 7, sugars: 4, timestamp: `${this.toDateKey(new Date(start))}T12:30:00` },
+            { name: 'Baked salmon + steamed broccoli + brown rice', category: 'DINNER' as const, calories: 560, protein: 42, carbohydrates: 45, fat: 14, fiber: 7, sugars: 3, timestamp: `${this.toDateKey(new Date(start))}T19:00:00` },
+            { name: 'Apple + almond butter', category: 'SNACK' as const, calories: 210, protein: 5, carbohydrates: 28, fat: 10, fiber: 5, sugars: 18, timestamp: `${this.toDateKey(new Date(start))}T16:00:00` },
+          ];
+
+          // Tue: Eggs + turkey wrap + chicken stir-fry
+          const d1 = new Date(start); d1.setDate(start.getDate() + 1);
+          const day1meals = [
+            { name: 'Scrambled eggs (3) + wholegrain toast', category: 'BREAKFAST' as const, calories: 380, protein: 24, carbohydrates: 34, fat: 14, fiber: 4, sugars: 3, timestamp: `${this.toDateKey(d1)}T08:15:00` },
+            { name: 'Turkey & avocado wholegrain wrap', category: 'LUNCH' as const, calories: 460, protein: 35, carbohydrates: 42, fat: 15, fiber: 6, sugars: 4, timestamp: `${this.toDateKey(d1)}T12:30:00` },
+            { name: 'Chicken stir-fry with vegetables & quinoa', category: 'DINNER' as const, calories: 520, protein: 40, carbohydrates: 48, fat: 12, fiber: 8, sugars: 6, timestamp: `${this.toDateKey(d1)}T19:15:00` },
+            { name: 'Cottage cheese + cucumber', category: 'SNACK' as const, calories: 190, protein: 18, carbohydrates: 8, fat: 4, fiber: 1, sugars: 4, timestamp: `${this.toDateKey(d1)}T15:30:00` },
+          ];
+
+          // Wed: Oats + tuna salad + lean beef + sweet potato
+          const d2 = new Date(start); d2.setDate(start.getDate() + 2);
+          const day2meals = [
+            { name: 'Oatmeal with banana & protein powder', category: 'BREAKFAST' as const, calories: 360, protein: 26, carbohydrates: 52, fat: 6, fiber: 6, sugars: 14, timestamp: `${this.toDateKey(d2)}T08:00:00` },
+            { name: 'Tuna salad on rye + mixed greens', category: 'LUNCH' as const, calories: 420, protein: 38, carbohydrates: 30, fat: 12, fiber: 6, sugars: 3, timestamp: `${this.toDateKey(d2)}T12:45:00` },
+            { name: 'Lean beef + roasted sweet potato + spinach', category: 'DINNER' as const, calories: 570, protein: 42, carbohydrates: 50, fat: 14, fiber: 8, sugars: 8, timestamp: `${this.toDateKey(d2)}T19:00:00` },
+            { name: 'Protein bar (low sugar)', category: 'SNACK' as const, calories: 200, protein: 15, carbohydrates: 20, fat: 6, fiber: 3, sugars: 6, timestamp: `${this.toDateKey(d2)}T16:00:00` },
+          ];
+
+          // Thu: Smoothie + lentil soup + grilled cod
+          const d3 = new Date(start); d3.setDate(start.getDate() + 3);
+          const day3meals = [
+            { name: 'Protein smoothie (whey, banana, milk)', category: 'BREAKFAST' as const, calories: 340, protein: 28, carbohydrates: 42, fat: 6, fiber: 3, sugars: 22, timestamp: `${this.toDateKey(d3)}T08:30:00` },
+            { name: 'Lentil & vegetable soup + wholegrain roll', category: 'LUNCH' as const, calories: 450, protein: 26, carbohydrates: 62, fat: 8, fiber: 12, sugars: 8, timestamp: `${this.toDateKey(d3)}T12:30:00` },
+            { name: 'Grilled cod + roasted courgette + new potatoes', category: 'DINNER' as const, calories: 540, protein: 44, carbohydrates: 46, fat: 10, fiber: 6, sugars: 4, timestamp: `${this.toDateKey(d3)}T19:00:00` },
+            { name: 'Low-fat cheese + wholegrain crackers', category: 'SNACK' as const, calories: 220, protein: 12, carbohydrates: 22, fat: 8, fiber: 2, sugars: 2, timestamp: `${this.toDateKey(d3)}T15:45:00` },
+          ];
+
+          // Fri: Eggs & veg + chicken + turkey meatballs
+          const d4 = new Date(start); d4.setDate(start.getDate() + 4);
+          const day4meals = [
+            { name: 'Veggie omelette (2 eggs + peppers + spinach)', category: 'BREAKFAST' as const, calories: 300, protein: 20, carbohydrates: 12, fat: 16, fiber: 4, sugars: 5, timestamp: `${this.toDateKey(d4)}T08:00:00` },
+            { name: 'Grilled chicken + roasted veg + hummus', category: 'LUNCH' as const, calories: 500, protein: 42, carbohydrates: 34, fat: 16, fiber: 7, sugars: 5, timestamp: `${this.toDateKey(d4)}T12:30:00` },
+            { name: 'Turkey meatballs + tomato sauce + wholewheat pasta', category: 'DINNER' as const, calories: 560, protein: 42, carbohydrates: 58, fat: 12, fiber: 7, sugars: 8, timestamp: `${this.toDateKey(d4)}T19:15:00` },
+            { name: 'Orange + handful mixed nuts', category: 'SNACK' as const, calories: 230, protein: 6, carbohydrates: 22, fat: 14, fiber: 4, sugars: 12, timestamp: `${this.toDateKey(d4)}T16:00:00` },
+          ];
+
+          // Sat: Slightly higher (social day) — still within 10%
+          const d5 = new Date(start); d5.setDate(start.getDate() + 5);
+          const day5meals = [
+            { name: 'Avocado toast + poached eggs', category: 'BREAKFAST' as const, calories: 420, protein: 20, carbohydrates: 38, fat: 20, fiber: 7, sugars: 3, timestamp: `${this.toDateKey(d5)}T09:00:00` },
+            { name: 'Grilled salmon + quinoa salad', category: 'LUNCH' as const, calories: 580, protein: 44, carbohydrates: 46, fat: 16, fiber: 6, sugars: 5, timestamp: `${this.toDateKey(d5)}T13:00:00` },
+            { name: 'Grilled chicken + roasted vegetables', category: 'DINNER' as const, calories: 520, protein: 42, carbohydrates: 36, fat: 14, fiber: 8, sugars: 6, timestamp: `${this.toDateKey(d5)}T19:30:00` },
+            { name: 'Greek yogurt + walnuts', category: 'SNACK' as const, calories: 200, protein: 12, carbohydrates: 14, fat: 10, fiber: 2, sugars: 10, timestamp: `${this.toDateKey(d5)}T16:30:00` },
+          ];
+
+          // Sun: Light recovery day — slightly under, still above 70%
+          const d6 = new Date(start); d6.setDate(start.getDate() + 6);
+          const day6meals = [
+            { name: 'Wholegrain cereal + skimmed milk', category: 'BREAKFAST' as const, calories: 310, protein: 14, carbohydrates: 52, fat: 5, fiber: 6, sugars: 16, timestamp: `${this.toDateKey(d6)}T08:30:00` },
+            { name: 'Chicken & vegetable soup + rye bread', category: 'LUNCH' as const, calories: 440, protein: 36, carbohydrates: 42, fat: 10, fiber: 7, sugars: 5, timestamp: `${this.toDateKey(d6)}T12:30:00` },
+            { name: 'Baked trout + green beans + new potatoes', category: 'DINNER' as const, calories: 520, protein: 40, carbohydrates: 44, fat: 12, fiber: 7, sugars: 4, timestamp: `${this.toDateKey(d6)}T19:00:00` },
+            { name: 'Banana + low-fat yogurt', category: 'SNACK' as const, calories: 190, protein: 8, carbohydrates: 34, fat: 2, fiber: 3, sugars: 24, timestamp: `${this.toDateKey(d6)}T15:30:00` },
+          ];
+
+          const allDays = [day0meals, day1meals, day2meals, day3meals, day4meals, day5meals, day6meals];
+          allDays.forEach((meals, i) => {
+            const d = new Date(start); d.setDate(start.getDate() + i);
+            const key = this.toDateKey(d);
+            const j = this.getJournal(key);
+            j.meals = meals.map(m => ({ ...m, userId: this.state.user.id, processed: false }));
+            j.skippedMeals = [];
+          });
+
+          // Add two stable weight measurements (very slight downward trend — healthy loss)
+          this.state.weightMeasurements = [];
+          const wStart = new Date(start); wStart.setDate(start.getDate() - 7);
+          this.state.weightMeasurements.push({ userId: this.state.user.id, weight: this.state.user.weight + 0.4, timestamp: `${this.toDateKey(wStart)}T08:00:00` });
+          this.state.weightMeasurements.push({ userId: this.state.user.id, weight: this.state.user.weight, timestamp: `${this.toDateKey(d6)}T08:00:00` });
+
+          // Select Wednesday (midweek, representative balanced day)
+          this.selectedDate.set(this.toDateKey(d2));
+        }
+        break;
     }
 
     this.journalVersion.update(v => v + 1);
