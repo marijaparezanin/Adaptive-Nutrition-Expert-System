@@ -198,7 +198,10 @@ public class NutritionEvaluationController {
             trace.add(String.format("Protein: %.0f g → %.0f%% of target", response.getTotalProtein(), response.getProteinPercentage()));
             trace.add(String.format("Fiber: %.0f g → %.0f%% of target", response.getTotalFiber(), response.getFiberPercentage()));
         }
-        trace.add(String.format("Drools fired %d rules → %d analytic signals", response.getFiredRules(), response.getAnalyticStatuses().size()));
+        trace.add(String.format("Drools fired %d rules → %d analytic signal%s, %d recommendation%s",
+            response.getFiredRules(),
+            response.getAnalyticStatuses().size(), response.getAnalyticStatuses().size() == 1 ? "" : "s",
+            response.getRecommendations().size(), response.getRecommendations().size() == 1 ? "" : "s"));
         if (!response.getDetectedPatterns().isEmpty()) {
             trace.add("CEP patterns: " + String.join(", ", response.getDetectedPatterns()));
         }
@@ -221,6 +224,10 @@ public class NutritionEvaluationController {
         boolean hasEnergyShortage = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.ENERGY_SHORTAGE);
         boolean hasStagnation = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.WEIGHT_STAGNATION_CONFIRMED);
         boolean hasExtremeRestriction = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.EXTREME_CALORIC_RESTRICTION);
+        boolean hasLinkedPattern = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.LINKED_PATTERN_STAGNATION_RISK);
+        boolean hasReactiveEating = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.REACTIVE_EATING_CONFIRMED);
+        boolean hasGoalConflictActivity = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.GOAL_CONFLICT_ACTIVITY_NEEDED);
+        boolean hasWeeklyProteinDeficit = statuses.stream().anyMatch(s -> s.getType() == AnalyticStatusType.WEEKLY_PROTEIN_DEFICIT);
 
         if (hasPlanChange || hasAdaptation) {
             sb.append("CRITICAL — Metabolic adaptation detected. Your body has adjusted to severe caloric restriction and weight loss has stalled. Further restriction is counterproductive. A structured plan recalibration (diet break, refeed, or calorie cycling) is strongly recommended.");
@@ -228,6 +235,14 @@ public class NutritionEvaluationController {
             sb.append("CRITICAL — Chronic protein deficit with negative weight trend detected. The body is catabolizing lean tissue during this deficit. Immediate protein increase is required to prevent muscle loss.");
         } else if (hasExtremeRestriction) {
             sb.append("CRITICAL — Weekly calorie average is below 50% of BMR. This level of restriction causes hormonal disruption, muscle loss, and metabolic slowdown. It is not safe to sustain.");
+        } else if (hasLinkedPattern) {
+            sb.append("CRITICAL — Compound pattern linkage confirmed by expert system: breakfast skipping + late-night eating + weight stagnation are operating as a reinforcing cycle. This three-way pattern is the primary driver of your stagnated progress.");
+        } else if (hasReactiveEating) {
+            sb.append("HIGH — Reactive eating pattern confirmed: daytime energy restriction is directly causing late-night caloric compensation. The expert system traced the causal chain through ENERGY_SHORTAGE → CIRCADIAN_DISRUPTION → late-night intake.");
+        } else if (hasGoalConflictActivity) {
+            sb.append("HIGH — Goal conflict: sustained caloric surplus detected while pursuing weight loss. The expert system recommends adding physical activity or reducing daily intake by 300-400 kcal to restore the required deficit.");
+        } else if (hasWeeklyProteinDeficit) {
+            sb.append("HIGH — Chronic weekly protein deficit confirmed. Protein intake has been below 80% of target across the entire week. Muscle protein synthesis is compromised — restructure meals to prioritize protein at each sitting.");
         } else if (hasOvereating && hasEnergyShortage) {
             sb.append("HIGH ALERT — The expert system traced a meal-skipping → compensatory overeating chain. Skipped meals caused energy depletion (ENERGY_SHORTAGE), which triggered a large reactive meal. This pattern is self-reinforcing and undermines your goal. Regular meal timing is key.");
         } else if (hasSurplus && hasCritical) {

@@ -1,4 +1,1 @@
 ruleName,eventType,category,window,frequency,startHour,endHour,patternName,filterExpression,windowExpression,constructorArgs
-Template_LateNightEatingPattern,Meal,Any,7d,3,22,6,LateNightEatingPattern," && (timestamp.getHour() >= 22 || timestamp.getHour() < 6)"," over window:time(7d)",3
-Template_BreakfastSkippingPattern,MealSkipped,BREAKFAST,3d,3,6,10,BreakfastSkippingPattern," && category == MealCategory.BREAKFAST"," over window:time(3d)",3
-Template_BingePattern,Meal,Any,90m,3,22,6,BingePattern," && true"," over window:time(90m)","3, 90"

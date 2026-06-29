@@ -53,9 +53,6 @@
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <span class="level-pill" [class]="'pill-' + expertOpinionLevel">{{ expertOpinionLevel | uppercase }}</span>
-            <button class="end-day-btn" type="button" (click)="endDay()" [disabled]="endDayLoading() || loading()">
-              {{ endDayLoading() ? 'Simulating…' : '⏱ End Day (CEP)' }}
-            </button>
           </div>
         </div>
 
@@ -233,9 +230,9 @@
           <span class="chip-ok">✓ No signals</span>
         </div>
 
-        <!-- Breakfast skipped — only if checkbox is explicitly checked, no meals labeled breakfast -->
-        <div class="breakdown-row skipped-row" *ngIf="isBreakfastSkipped() && !hasBreakfastMeal">
-          <span>⚠ Breakfast marked as skipped today</span>
+        <!-- Backend-derived breakfast skip indicator: appears only when CEP engine generates ENERGY_SHORTAGE -->
+        <div class="breakdown-row skipped-row" *ngIf="!hasBreakfastMeal && selectedMeals.length > 0 && !hasEnergyShortageSignal">
+          <span>ℹ No breakfast logged — CEP engine will derive MealSkipped and evaluate for patterns</span>
         </div>
       </article>
 
@@ -251,13 +248,25 @@
         </div>
 
         <div class="test-scenarios">
-          <p class="eyebrow">Demo scenarios (replaces selected day)</p>
+          <p class="eyebrow">Demo scenarios — showcase expert system rules (replaces selected day)</p>
+          <p class="scenario-group-label">📋 Daily patterns</p>
           <div class="scenario-buttons">
-            <button type="button" class="scenario-btn" (click)="loadTestScenario('lateNightBinge')">🌙 Late night binge</button>
-            <button type="button" class="scenario-btn" (click)="loadTestScenario('breakfastSkipping')">⏭ Skip breakfast → overeating</button>
-            <button type="button" class="scenario-btn" (click)="loadTestScenario('bingePlusSnacking')">🍪 Binge + unplanned snacking</button>
-            <button type="button" class="scenario-btn" (click)="loadTestScenario('eatingLessGoal')">📉 Eating below goal</button>
-            <button type="button" class="scenario-btn" (click)="loadTestScenario('highProteinDay')">💪 Optimal high-protein day</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('surplusVsGoal')" title="Rules: Rule_Weight_Loss_Conflict + CEP Calorie Spike → SURPLUS_WITH_DEFICIT_GOAL chain">⚖ Surplus vs Goal</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('breakfastSkipCompensation')" title="Rules: CEP Today Breakfast Skipped → ENERGY_SHORTAGE → Rule Pattern Linkage → OVEREATING_DETECTED + Late Night">⛓ Skip → Binge Chain</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('rapidCluster')" title="Rules: CEP Rapid Meal Cluster (3 meals 12:00/12:40/13:15 within 90 min) → BingePattern → surplus risk">⚡ Rapid Meal Cluster</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('lateNightEating')" title="Rules: CEP Late Night Spike (980 kcal at 23:15) → CIRCADIAN_RHYTHM_DISRUPTION + Long Fast (17:00→23:15)">🌙 Late Night Eating</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('longFastLowProtein')" title="Rules: CEP Long Fast (07:00→17:00 = 10h gap) → LONG_FAST_DETECTED + Low Protein Meal signals">⏱ Long Fast + Low Protein</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('snackOverload')" title="Rules: CEP Unplanned Snacking (4 snacks) → SNACK_OVERLOAD_CALORIC_RISK chain">🍪 Snack Overload</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('fiberCrisis')" title="Rules: FIBER_CRITICALLY_LOW (6g total) + caloric surplus → QUALITY_DEFICIT compound recommendation">🌾 Fiber Crisis</button>
+            <button type="button" class="scenario-btn" (click)="loadTestScenario('balancedDay')" title="All nutrition targets met — verifies system correctly reports no signals">✅ Optimal Day</button>
+          </div>
+          <p class="scenario-group-label">📅 Multi-day & weekly CEP chains</p>
+          <div class="scenario-buttons">
+            <button type="button" class="scenario-btn scenario-btn-weekly" (click)="loadTestScenario('weeklyBreakfastPattern')" title="Seeds Mon–Wed with no breakfast → 3 MealSkipped facts → CEP BreakfastSkippingPattern + ENERGY_SHORTAGE + OVEREATING chain">📅 Weekly Skip Pattern</button>
+            <button type="button" class="scenario-btn scenario-btn-weekly" (click)="loadTestScenario('linkedPatternStagnation')" title="Spec Rule_Pattern_Linkage: BreakfastSkipping (3 days) + LateNightEating (3 times) → LINKED_PATTERN_STAGNATION_RISK synthesis">🔗 Pattern Linkage (Spec §4.2.2)</button>
+            <button type="button" class="scenario-btn scenario-btn-weekly" (click)="loadTestScenario('muscleLossRisk')" title="5 days protein deficit below 70% + negative weight trend → ConsistentProteinDeficit → MUSCLE_LOSS_RISK → PROTEIN_CRITICAL chain">💪 Muscle Loss Risk Chain</button>
+            <button type="button" class="scenario-btn scenario-btn-weekly" (click)="loadTestScenario('weightStagnation')" title="Low weight variance + caloric deficit → WEIGHT_STAGNATION_CONFIRMED → CALORIC_ADAPTATION_BLOCK → PLAN_CHANGE_NEEDED">📉 Weight Stagnation + Adaptation</button>
+            <button type="button" class="scenario-btn scenario-btn-weekly" (click)="loadTestScenario('extremeRestriction')" title="Weekly average below 50% BMR → EXTREME_CALORIC_RESTRICTION → PLAN_CHANGE_NEEDED critical alert">⚠ Extreme Restriction</button>
           </div>
         </div>
 
@@ -314,10 +323,7 @@
           <button class="primary-button" type="submit">Add meal</button>
         </form>
 
-        <label class="check-row">
-          <input type="checkbox" [checked]="isBreakfastSkipped()" (change)="toggleSkippedBreakfast($any($event.target).checked)">
-          <span>Mark breakfast as explicitly skipped today</span>
-        </label>
+        <p class="form-note">Breakfast skipping is detected automatically from meal data — no manual marking needed. Log meals across the week and the CEP engine will identify the pattern.</p>
       </article>
 
       <!-- ══════════════════════════════════════
@@ -375,7 +381,6 @@
             <p class="eyebrow">Weekly pattern</p>
             <h2>7-day trend summary</h2>
           </div>
-          <button class="outline-button" type="button" (click)="seedExpertScenario()">Seed expert scenario</button>
         </div>
         <div class="macro-grid">
           <div>

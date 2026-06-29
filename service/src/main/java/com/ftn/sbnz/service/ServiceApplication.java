@@ -42,17 +42,22 @@ public class ServiceApplication {
 
         kfs.writeKModuleXML(kmodule.toXML());
 
-        InputStream staticRules = getClass().getResourceAsStream("/rules/nutrition rules.drl");
+        // Load the main nutrition rules DRL from the kjar on the classpath
+        InputStream staticRules = getClass().getResourceAsStream("/rules/nutrition-rules.drl");
         if (staticRules != null) {
             kfs.write("src/main/resources/rules/nutrition_rules.drl",
                     ks.getResources().newInputStreamResource(staticRules));
+        } else {
+            System.err.println("WARNING: /rules/nutrition-rules.drl not found on classpath — main rules will not be loaded!");
         }
 
         String calorieDrl = compileTemplate("/templates/calorie-balance.csv", "/templates/calorie-balance.drt");
         kfs.write("src/main/resources/rules/compiled_calorie_rules.drl", calorieDrl);
 
         String temporalDrl = compileTemplate("/templates/temporal-patterns.csv", "/templates/temporal-patterns.drt");
-        kfs.write("src/main/resources/rules/compiled_temporal_rules.drl", temporalDrl);
+        if (temporalDrl != null && !temporalDrl.isBlank()) {
+            kfs.write("src/main/resources/rules/compiled_temporal_rules.drl", temporalDrl);
+        }
 
         KieBuilder kieBuilder = ks.newKieBuilder(kfs);
         kieBuilder.buildAll();
@@ -62,15 +67,21 @@ public class ServiceApplication {
     }
     
     private String compileTemplate(String csvPath, String drtPath) {
-        // Open streams right when needed, and close them explicitly at the very end
         List<Map<String, Object>> mappedData;
         try (InputStream csvStream = getClass().getResourceAsStream(csvPath)) {
             if (csvStream == null) {
-                throw new IllegalArgumentException("Could not find CSV file: " + csvPath);
+                System.err.println("WARNING: Could not find CSV file: " + csvPath + " — skipping template.");
+                return "";
             }
             mappedData = parseCsvToMap(csvStream);
         } catch (Exception e) {
             throw new RuntimeException("Error processing CSV data from " + csvPath, e);
+        }
+
+        // If no data rows, skip compilation — produces invalid DRL with empty template body
+        if (mappedData.isEmpty()) {
+            System.out.println("INFO: No data rows in " + csvPath + " — skipping template compilation.");
+            return "";
         }
 
         String compiledDrl;
@@ -83,13 +94,13 @@ public class ServiceApplication {
         } catch (Exception e) {
             throw new RuntimeException("Error compiling template " + drtPath, e);
         }
-        
+
         System.out.println("\n========================================================");
         System.out.println("SUCCESSFULLY GENERATED DRL FROM TEMPLATE: " + drtPath);
         System.out.println("========================================================");
         System.out.println(compiledDrl);
         System.out.println("========================================================\n");
-        
+
         return compiledDrl;
     }
 

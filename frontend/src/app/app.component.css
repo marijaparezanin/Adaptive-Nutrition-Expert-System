@@ -520,7 +520,16 @@ h2 { font-size: 1.22rem; }
   letter-spacing: 0.04em;
 }
 
-/* ── End Day button ── */
+/* ── Form note (info text under form elements) ── */
+.form-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* ── End Day button (removed from UI, kept for reference) ── */
 .end-day-btn {
   padding: 8px 16px;
   background: rgba(255,206,115,0.22);
@@ -684,6 +693,20 @@ h2 { font-size: 1.22rem; }
   transition: all 0.15s;
 }
 .scenario-btn:hover { background: #e6f3ed; border-color: #69d39d; }
+.scenario-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a7a6a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 12px 0 5px;
+}
+.scenario-btn-weekly {
+  background: #f0f4ff;
+  border-color: #a0b0d8;
+  color: #1a2a5a;
+}
+.scenario-btn-weekly:hover { background: #dce5ff; border-color: #6080c8; }
 
 .quick-meals {
   margin-bottom: 18px;

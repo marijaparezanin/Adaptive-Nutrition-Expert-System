@@ -59,19 +59,9 @@ end
 // TIER 1 — MEAL PROCESSING (salience 90)
 // ─────────────────────────────────────────────────────────────────────────────
 
-rule "Update daily intake from meal"
-salience 90
-when
-    $meal : Meal($userId : userId, processed == false)
-    $intake : DailyIntake(userId == $userId, date == $meal.timestamp.toLocalDate())
-then
-    modify($intake) {
-        addMeal($meal)
-    }
-    modify($meal) {
-        setProcessed(true)
-    }
-end
+// NOTE: DailyIntake arrives pre-aggregated from the frontend (totalCalories/totalProtein/totalFiber
+// already set). We do NOT re-aggregate here — that would double-count. Individual Meal facts are
+// inserted solely for CEP pattern detection (late-night check, binge cluster, long fast, etc.).
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TIER 2 — SINGLE-MEAL SIGNALS
@@ -274,16 +264,18 @@ end
 // TIER 4 — CEP PATTERN DETECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Fixed BingePattern: counts meals within 90 min of a single anchor meal
-// 3 meals at 8am, 12:30pm, 6pm will NOT trigger this — they are hours apart
+// BingePattern: 3+ meals within a strict 90-minute FORWARD window from an anchor meal.
+// Uses anchor → anchor+90min (not centred ±90min) to avoid false positives.
+// Meals at 10:30, 14:20, 17:05, 22:35: no anchor has 3+ meals within its next 90 min → does NOT fire.
+// Meals at 12:00, 12:40, 13:15: anchor 12:00 window 12:00-13:30 contains all three → FIRES.
 rule "CEP Rapid Meal Cluster"
 when
     $user : User($userId : id)
     $anchor : Meal(userId == $userId, $anchorTime : timestamp)
     Number(intValue >= 3) from accumulate(
         Meal(userId == $userId,
-             timestamp.isAfter($anchorTime.minusMinutes(90)),
-             timestamp.isBefore($anchorTime.plusMinutes(90))),
+             timestamp.compareTo($anchorTime) >= 0,
+             timestamp.compareTo($anchorTime.plusMinutes(90)) <= 0),
         count(1)
     )
     not BingePattern(userId == $userId)
@@ -301,6 +293,18 @@ when
     not UnplannedSnackingPattern(userId == $userId)
 then
     insert(new UnplannedSnackingPattern($userId, LocalDate.now(), 4));
+end
+
+// LateNightEatingPattern from WeeklyPattern — the frontend pre-counts late meals across the week.
+// The spec threshold is: 3+ late meals (22h-06h) in a 7-day window.
+// We use WeeklyPattern.lateMealCount (pre-aggregated) to detect the weekly pattern.
+rule "CEP Late Night Eating Weekly Pattern"
+when
+    $user : User($userId : id)
+    WeeklyPattern(userId == $userId, $lateMealCount : lateMealCount >= 3)
+    not LateNightEatingPattern(userId == $userId)
+then
+    insert(new LateNightEatingPattern($userId, LocalDate.now(), $lateMealCount));
 end
 
 // Chain: UnplannedSnacking + high calories → caloric risk signal
@@ -325,14 +329,16 @@ then
     ));
 end
 
-// Long fast: gap > 6h between any two consecutive meals during active hours
+// Long fast: gap > 6h between any two meals where both fall in active hours (07h-22h)
+// $first must be before $second (timestamp.isBefore) and gap must exceed 6 hours.
 rule "Rule Long Fast"
 when
-    $first : Meal($userId : userId, $firstTime : timestamp)
+    $first : Meal($userId : userId, $firstTime : timestamp,
+                  timestamp.getHour() >= 7, timestamp.getHour() <= 22)
     $second : Meal(userId == $userId,
                    this != $first,
                    timestamp.isAfter($firstTime.plusHours(6)),
-                   timestamp.getHour() >= 8,
+                   timestamp.getHour() >= 7,
                    timestamp.getHour() <= 22)
     not LongFastDetected(userId == $userId)
 then
@@ -345,7 +351,7 @@ then
     ));
     insert(new Recommendation(
         "LONG_FAST",
-        "A gap of over 6 hours between meals was detected during active hours. Plan a small snack or bring your next meal forward.",
+        "A gap of over 6 hours between meals was detected during active hours (07:00-22:00). Prolonged fasting raises cortisol and triggers rebound hunger. Plan a protein-rich snack to bridge the gap.",
         $userId,
         LocalDateTime.now()
     ));
@@ -409,6 +415,41 @@ then
     insert(new Recommendation(
         "FAST_PLUS_MISSED_MEAL",
         "Both a long fasting gap AND a skipped meal were detected. Your body is in an energy shortage. Eat a balanced meal with protein and complex carbs now.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Replaces Template_BreakfastSkippingPattern (moved out of template engine to avoid CSV parsing issues).
+// Fires when 3+ MealSkipped(BREAKFAST) facts are in working memory across the week.
+rule "Template_BreakfastSkippingPattern"
+when
+    $user : User($userId : id)
+    Number(intValue >= 3) from accumulate(
+        MealSkipped(userId == $userId, category == MealCategory.BREAKFAST),
+        count(1)
+    )
+    not BreakfastSkippingPattern(userId == $userId)
+then
+    insert(new BreakfastSkippingPattern($userId, LocalDate.now(), 3));
+end
+
+// Single MealSkipped(BREAKFAST) → ENERGY_SHORTAGE (today's signal, before weekly pattern fires)
+rule "CEP Today Breakfast Skipped"
+when
+    $user : User($userId : id)
+    MealSkipped(userId == $userId, category == MealCategory.BREAKFAST)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.ENERGY_SHORTAGE)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.ENERGY_SHORTAGE,
+        SeverityLevel.WARNING,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "BREAKFAST_SKIPPED_TODAY",
+        "No breakfast was logged today. Skipping breakfast elevates cortisol and drives compensatory overeating later — typically 20-30% more calories at subsequent meals.",
         $userId,
         LocalDateTime.now()
     ));
@@ -719,6 +760,142 @@ then
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TIER 7 — COMPOUND PATTERN SYNTHESIS (spec Rule_Pattern_Linkage and variants)
+// These rules fire AFTER lower-tier AnalyticStatus facts are already in working memory.
+// Forward chaining: Tier2/3/5 facts → Tier7 compound conclusions.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Spec: BreakfastSkipping + LateNightEating + weight not moving → linked pattern stagnation risk.
+// WeightStagnationDetected fires when weightVarianceKg > 0 && < 0.2 (weight barely moving).
+// This pattern explains WHY weight stagnates: the breakfast→late-night cycle keeps total intake above target.
+rule "Rule Pattern Linkage Stagnation Risk"
+when
+    BreakfastSkippingPattern($userId : userId)
+    LateNightEatingPattern(userId == $userId)
+    WeightStagnationDetected(userId == $userId)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.LINKED_PATTERN_STAGNATION_RISK)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.LINKED_PATTERN_STAGNATION_RISK,
+        SeverityLevel.CRITICAL,
+        LocalDateTime.now().plusDays(7),
+        $userId
+    ));
+    insert(new Recommendation(
+        "LINKED_PATTERN_STAGNATION",
+        "Compound pattern detected: breakfast skipping + late-night eating + weight stagnation. " +
+        "These three patterns reinforce each other — morning restriction shifts your caloric load to the evening, " +
+        "disrupting circadian metabolism and halting weight loss. Break the cycle: eat within 1 hour of waking.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Spec: ConsistentProteinDeficit across week → weekly protein deficit signal
+rule "Rule Weekly Protein Deficit"
+when
+    $user : User($userId : id, $weight : weight > 0, $proteinTarget : targetProtein > 0)
+    ConsistentProteinDeficit(userId == $userId)
+    WeeklyPattern(userId == $userId, proteinTrend < ($proteinTarget * 0.80))
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.WEEKLY_PROTEIN_DEFICIT)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.WEEKLY_PROTEIN_DEFICIT,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(3),
+        $userId
+    ));
+    insert(new Recommendation(
+        "WEEKLY_PROTEIN_DEFICIT",
+        "Protein intake has been consistently below 80% of target for the entire week. " +
+        "At this level, muscle synthesis is compromised regardless of training. " +
+        "Add a high-protein food (eggs, chicken breast, Greek yogurt, cottage cheese) to each meal.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Spec: EnergyShortage + LateNightEating → reactive eating confirmed
+rule "Rule Reactive Eating Confirmed"
+when
+    AnalyticStatus($userId : userId, type == AnalyticStatusType.ENERGY_SHORTAGE)
+    LateNightEatingPattern(userId == $userId)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.CIRCADIAN_RHYTHM_DISRUPTION)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.REACTIVE_EATING_CONFIRMED)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.REACTIVE_EATING_CONFIRMED,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(2),
+        $userId
+    ));
+    insert(new Recommendation(
+        "REACTIVE_EATING_SYNTHESIS",
+        "Reactive eating confirmed: daytime energy restriction is directly driving late-night overeating. " +
+        "This is not a willpower issue — your hunger hormones (ghrelin) peak after prolonged restriction. " +
+        "Eat a balanced 400-500 kcal meal before 12:00 to reset your appetite rhythm.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Spec: Caloric surplus + weight loss goal → goal conflict activity signal
+rule "Rule Goal Conflict Activity Needed"
+when
+    $user : User($userId : id, goal == GoalType.WEIGHT_LOSS, $target : targetCalories > 0)
+    DailyIntake(userId == $userId, totalCalories > ($target * 1.10))
+    WeeklyPattern(userId == $userId, averageCalories >= $target)
+    not AnalyticStatus(userId == $userId, type == AnalyticStatusType.GOAL_CONFLICT_ACTIVITY_NEEDED)
+then
+    insert(new AnalyticStatus(
+        AnalyticStatusType.GOAL_CONFLICT_ACTIVITY_NEEDED,
+        SeverityLevel.HIGH,
+        LocalDateTime.now().plusDays(1),
+        $userId
+    ));
+    insert(new Recommendation(
+        "GOAL_CONFLICT_ACTIVITY",
+        "Your weight-loss goal is being undermined by sustained caloric surplus. " +
+        "Either reduce daily intake by 300-400 kcal, or add 30-45 minutes of moderate-intensity cardio to create the required deficit.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Compound: ProteinCritical + EnergyShortage → acute protein-energy co-deficiency
+rule "Rule Compound Reactive Protein Energy"
+when
+    AnalyticStatus($userId : userId, type == AnalyticStatusType.PROTEIN_CRITICAL)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.ENERGY_SHORTAGE)
+    not Recommendation(userId == $userId, type == "COMPOUND_REACTIVE_PROTEIN")
+then
+    insert(new Recommendation(
+        "COMPOUND_REACTIVE_PROTEIN",
+        "Acute compound risk: both protein and total energy are critically insufficient simultaneously. " +
+        "The body will catabolise muscle to meet energy demands. Consume a protein-rich, calorie-adequate meal immediately.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// Compound: LongFast + CircadianDisruption → fast-circadian metabolic combo
+rule "Rule Fast Circadian Combo"
+when
+    LongFastDetected($userId : userId)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.CIRCADIAN_RHYTHM_DISRUPTION)
+    not Recommendation(userId == $userId, type == "FAST_CIRCADIAN_COMBO")
+then
+    insert(new Recommendation(
+        "FAST_CIRCADIAN_COMBO",
+        "Prolonged daytime fasting combined with late-night eating creates a double circadian disruption. " +
+        "This pattern suppresses leptin, elevates cortisol, and promotes fat storage — even without a caloric surplus. " +
+        "Align eating with daylight hours: first meal before 09:00, last meal before 20:00.",
+        $userId,
+        LocalDateTime.now()
+    ));
+end
+
+// ─────────────────────────────────────────────────────────────────────────────
 // QUERIES
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -741,4 +918,11 @@ query "whyPlanChangeNeeded"(Long $userId)
     AnalyticStatus(userId == $userId, type == AnalyticStatusType.WEIGHT_STAGNATION_CONFIRMED)
     AnalyticStatus(userId == $userId, type == AnalyticStatusType.CALORIC_ADAPTATION_BLOCK)
     AnalyticStatus(userId == $userId, type == AnalyticStatusType.PLAN_CHANGE_NEEDED)
+end
+
+query "whyLinkedPatternStagnation"(Long $userId)
+    BreakfastSkippingPattern(userId == $userId)
+    LateNightEatingPattern(userId == $userId)
+    WeightStagnationDetected(userId == $userId)
+    AnalyticStatus(userId == $userId, type == AnalyticStatusType.LINKED_PATTERN_STAGNATION_RISK)
 end
