@@ -110,8 +110,6 @@ java -jar target\service-0.0.1-SNAPSHOT.jar
 
 Call endpoints from a second PowerShell window while the service is running.
 
-The demos exist because this is a knowledge-based system, not a normal CRUD application. In a normal application you call one method and get one calculated answer. In Drools, you insert facts into working memory, run `fireAllRules()`, and the rule engine decides which rules match. The demos create controlled fact sets to prove that forward chaining, CEP, templates, and backward-style explanation queries work.
-
 This command:
 
 ```powershell
