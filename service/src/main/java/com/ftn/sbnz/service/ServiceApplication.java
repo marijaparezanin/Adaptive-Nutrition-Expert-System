@@ -38,7 +38,7 @@ public class ServiceApplication {
                 .setEventProcessingMode(EventProcessingOption.STREAM)
                 .newKieSessionModel("nutritionKSession")
                 .setDefault(true)
-                .setClockType(ClockTypeOption.get("realtime"));
+                .setClockType(ClockTypeOption.get("pseudo"));
 
         kfs.writeKModuleXML(kmodule.toXML());
 

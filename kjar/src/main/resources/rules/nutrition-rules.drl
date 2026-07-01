@@ -913,6 +913,48 @@ then
 end
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CEP SLIDING WINDOW RULES — over window:time(...) operatori
+// Ova pravila koriste pseudo clock koji se može kontrolisati,
+// što omogućava ispravno funkcionisanje sliding windows.
+// ─────────────────────────────────────────────────────────────────────────────
+
+rule "CEP Window BingePattern"
+when
+    $user : User($userId : id)
+    Number(intValue >= 3) from accumulate(
+        Meal(userId == $userId) over window:time(90m),
+        count(1)
+    )
+    not BingePattern(userId == $userId)
+then
+    insert(new BingePattern($userId, LocalDate.now(), 3, 90));
+end
+
+rule "CEP Window BreakfastSkipping"
+when
+    $user : User($userId : id)
+    Number(intValue >= 3) from accumulate(
+        MealSkipped(userId == $userId, category == MealCategory.BREAKFAST) over window:time(7d),
+        count(1)
+    )
+    not BreakfastSkippingPattern(userId == $userId)
+then
+    insert(new BreakfastSkippingPattern($userId, LocalDate.now(), 3));
+end
+
+rule "CEP Window LateNightPattern"
+when
+    $user : User($userId : id)
+    Number(intValue >= 3) from accumulate(
+        Meal(userId == $userId, timestamp.getHour() >= 22) over window:time(7d),
+        count(1)
+    )
+    not LateNightEatingPattern(userId == $userId)
+then
+    insert(new LateNightEatingPattern($userId, LocalDate.now(), 3));
+end
+
+// ─────────────────────────────────────────────────────────────────────────────
 // QUERIES
 // ─────────────────────────────────────────────────────────────────────────────
 
